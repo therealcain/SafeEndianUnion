@@ -1,5 +1,5 @@
 # Safe Endian Union
-## What is it? ( still incomplete )
+## What is it?
 `SafeEndianUnion`is a class written in C++20, that using in the underlying implementation a C `union` with endianness safety, that doesn't matter what you do, it will work on Little Endian and Big Endian machines.
 Many times people avoid using `union` since their endianness problem, and using bitwise operations to not rely on the endianness of the targeted machine, but these bitwise operations are very ugly most of the case, and can make developers hard to understand it, `union` solves the bitwise ugliness, and now it solves also the endianness issue.
 
@@ -38,3 +38,6 @@ A = 255
 Since C++ does not support reflection by default yet, i couldn't check the `struct` fields, so please avoid the following when making your `struct`:
 * Do not use pointers in your `struct`s, this could break the union.
 * Do not have different types in your struct, stick to only one type, this may change the size of the `struct` due to alignment and padding.
+
+## TODO
+* Make it faster by using intrinsic functions.
