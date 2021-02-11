@@ -1,19 +1,14 @@
-// TODO 
-// add rvalue support
-// Change the get function
-// The rule of 5.
-// add operators.
-// add intrinsic functions
-
 #pragma once
 
 #include <bit>
 #include <type_traits>
 #include <cstddef>
 #include <cstring>
-#include <algorithm>
 #include <iostream>
 #include <climits>
+#include <cmath>
+
+#include <algorithm>
 
 namespace evi { 
 
@@ -155,6 +150,7 @@ struct is_plain_type
 template<typename T>
 static constexpr bool is_plain_type_v = is_plain_type<T>::value;
 
+// -------------------------------------------------------------------------
 // Checks if a struct is POD aka standard layout.
 template<typename T>
 struct is_struct_standard_layout {
@@ -164,6 +160,7 @@ struct is_struct_standard_layout {
 template<typename T>
 static constexpr bool is_struct_standard_layout_v = is_struct_standard_layout<T>::value;
 
+// -------------------------------------------------------------------------
 // Checks if a type is an union possiblity
 template<typename T>
 struct is_union_possible_type 
@@ -179,6 +176,7 @@ template<typename T>
 static constexpr bool is_union_possible_type_v = is_union_possible_type<T>::value;
 } // namespace detail
 
+// -------------------------------------------------------------------------
 // Union all of the types.
 template<typename... Ts>
 class Union
@@ -195,6 +193,7 @@ public:
 #endif
 };
 
+// -------------------------------------------------------------------------
 // Which endianness the struct is.
 enum class ByteOrder 
 { 
@@ -202,6 +201,7 @@ enum class ByteOrder
 	Big    = static_cast<int>(std::endian::big)
 };
 
+// -------------------------------------------------------------------------
 // Safe Endian Union
 template<ByteOrder Endianness, detail::only_union UnionT>
 class SafeEndianUnion
@@ -221,30 +221,37 @@ private:
 	}
 
 	template<typename T>
-	static inline T reverse_primitive_bytes(const T& src)
+	static inline T reverse_primitive_bytes(T src)
 	{
 		T dest = src;
-		
-		for(uint8_t i = 0; i < 8; i++)
- 		    dest |= ((src >> i) & 0b1) << (7 - i);
+
+		while(src > 0)
+		{
+			dest <<= 1;
+
+			if(src & 1 == 1)
+				dest ^= 1;
+
+			src >>= 1;
+		}
 
 		return dest;
 	}
 
 	template<typename T>
-	void check_and_fix_endianness(T& value)
+	static inline T check_and_fix_endianness(const T& value)
 	{
-		if(typeid(value).hash_code() != m_type_code)
+		T ret = value;
+
+		if constexpr(static_cast<std::endian>(Endianness) != std::endian::native)
 		{
-			if constexpr(static_cast<std::endian>(Endianness) != std::endian::native);
-			{
-				// Checks 
-				if constexpr(std::is_arithmetic_v<T>)	
-					value = reverse_primitive_bytes(value);
-				else
-					value = reverse_structure_bytes(value);
-			}
+			if constexpr(std::is_arithmetic_v<T>)	
+				ret = reverse_primitive_bytes(value);
+			else
+				ret = reverse_structure_bytes(value);
 		}
+
+		return ret;
 	}
 
 public:
@@ -252,18 +259,14 @@ public:
 	const auto get_by_index() 
 	{
 		auto value = detail::get_by_index<i>(this->m_union);
-		check_and_fix_endianness(value);
-		
-		return value;
+		return check_and_fix_endianness(value);
 	}
 
 	template<typename T>
 	const auto get_by_type()
 	{
 		T& value = detail::get_by_type<T>(this->m_union);
-		check_and_fix_endianness(value);
-		
-		return value;
+		return check_and_fix_endianness(value);
 	}
 
 	template<size_t i, typename T>
@@ -271,7 +274,6 @@ public:
 	{
 		auto& val = detail::get_by_index<i>(this->m_union);
 		val = value;
-		m_type_code = typeid(T).hash_code();
 	}
 
 	template<typename T>
@@ -279,12 +281,7 @@ public:
 	{
 		auto& val = detail::get_by_type<T>(this->m_union);
 		val = value;
-		m_type_code = typeid(T).hash_code();
 	}
-
-private:
-	using type_code = size_t;
-	type_code m_type_code = 0;
 };
 
 } // namespace evi
