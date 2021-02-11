@@ -170,6 +170,50 @@ struct is_union_possible_type
 
 template<typename T>
 static constexpr bool is_union_possible_type_v = is_union_possible_type<T>::value;
+// -------------------------------------------------------------------------
+
+class SwapEndian
+{
+private:
+	template<typename T>
+	static inline T reverse_bits(T src)
+	{
+		T dest = src;
+
+		while(src > 0)
+		{
+			dest <<= 1;
+
+			if(src & 1 == 1)
+				dest ^= 1;
+
+			src >>= 1;
+		}
+
+		return dest;
+	}
+
+public:
+	template<typename T>
+	static inline T swap(T value)
+		requires( std::is_arithmetic_v<T> )
+	{
+		return reverse_bits(value);
+	}
+
+	template<typename T>
+	static inline T swap(const T& src)
+	{
+		T dest;
+		std::memcpy(&dest, &src, sizeof(T));
+
+		std::byte* dest_casted = reinterpret_cast<std::byte*>(&dest);
+		std::reverse(dest_casted, dest_casted + sizeof(T));
+
+		return *reinterpret_cast<T*>(dest_casted);
+	}
+};
+
 } // namespace detail
 
 // -------------------------------------------------------------------------
@@ -205,49 +249,15 @@ class SafeEndianUnion
 {
 private:
 	template<typename T>
-	static constexpr T reverse_structure_bytes(const T& src) 
-	{
-		T dest;
-		std::memcpy(&dest, &src, sizeof(T));
-
-		std::byte* dest_casted = reinterpret_cast<std::byte*>(&dest);
-		std::reverse(dest_casted, dest_casted + sizeof(T));
-
-		return *reinterpret_cast<T*>(dest_casted);
-	}
-
-	template<typename T>
-	static constexpr T reverse_primitive_bytes(T src)
-	{
-		T dest = src;
-
-		while(src > 0)
-		{
-			dest <<= 1;
-
-			if(src & 1 == 1)
-				dest ^= 1;
-
-			src >>= 1;
-		}
-
-		return dest;
-	}
-
-	template<typename T>
-	constexpr T check_and_fix_endianness(const T& value)
+	inline T check_and_fix_endianness(const T& value)
 	{
 		T ret = value;
 
-		if constexpr(static_cast<std::endian>(Endianness) != std::endian::native)
+		static constexpr std::endian endian = static_cast<std::endian>(Endianness);
+		if constexpr(endian != std::endian::native)
 		{
 			if(m_type_code != typeid(T).hash_code())
-			{
-				if constexpr(std::is_arithmetic_v<T>)
-					ret = reverse_primitive_bytes(value);
-				else
-					ret = reverse_structure_bytes(value);
-			}
+				ret = detail::SwapEndian::swap(value);
 		}
 
 		return ret;
@@ -255,6 +265,9 @@ private:
 
 public:
 	constexpr SafeEndianUnion() noexcept = default;
+	
+	template<typename T>
+	constexpr SafeEndianUnion(const T& value) { set(value); }
 
 	constexpr SafeEndianUnion(const SafeEndianUnion& other) {
 		this->m_union = other.m_union;
@@ -271,7 +284,6 @@ public:
 	{
 		auto value = detail::get_by_index<i>(this->m_union);
 		return check_and_fix_endianness(value);
-
 	}
 
 	template<typename T>
