@@ -10,7 +10,7 @@ Converting an RGBA value to hex and backwards:
 #include "SafeEndianUnion.hpp"
 
 struct RGBA { 
-    unsigned char a, r, g, b;
+    unsigned char r, g, b, a;
 };
 
 int main()
@@ -18,7 +18,7 @@ int main()
     // First parameter: specify the order of the struct.
     // Second parameter: expanding the union to:
     // union { unsigned int; RGBA; };
-    evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<unsigned int /*hex*/, RGBA>> uni;
+    evi::SafeEndianUnion<evi::ByteOrder::Big, evi::Union<unsigned int /*hex*/, RGBA>> uni;
     uni = 0xAABBCCFF;
     
     auto as_struct = uni.get<RGBA>();
@@ -33,6 +33,7 @@ G = 187
 B = 204
 A = 255
 ```
+Test it yourself on [godbolt!](https://godbolt.org/z/zW5nnc)
 
 ## Rules
 Since C++ does not support reflection by default yet, i couldn't check the `struct` fields, so please avoid the following when making your `struct`:
