@@ -5,7 +5,7 @@ Many times people avoid using `union` since their endianness problem, and using 
 
 ## Usage Example:
 
-### Converting an RGBA value to hex and backwards:
+### Converting an RGBA value to hex and hex to RGBA:
 ```cpp
 struct RGBA { 
     unsigned char r, g, b, a;
