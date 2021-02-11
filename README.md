@@ -35,7 +35,4 @@ A = 255
 ```
 
 ## TODO 
-* Overload for universal references.
-* Follow the rule of 5.
-* Add operator overload, for `operator=`.
 * Make it faster by using intrinsic functions.
