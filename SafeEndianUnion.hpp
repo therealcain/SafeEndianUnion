@@ -4,8 +4,6 @@
 #include <type_traits>
 #include <cstddef>
 #include <cstring>
-#include <climits>
-#include <cmath>
 #include <algorithm>
 
 namespace evi { 
@@ -237,16 +235,19 @@ private:
 	}
 
 	template<typename T>
-	static constexpr T check_and_fix_endianness(const T& value)
+	constexpr T check_and_fix_endianness(const T& value)
 	{
 		T ret = value;
 
 		if constexpr(static_cast<std::endian>(Endianness) != std::endian::native)
 		{
-			if constexpr(std::is_arithmetic_v<T>)	
-				ret = reverse_primitive_bytes(value);
-			else
-				ret = reverse_structure_bytes(value);
+			if(m_type_code != typeid(T).hash_code())
+			{
+				if constexpr(std::is_arithmetic_v<T>)
+					ret = reverse_primitive_bytes(value);
+				else
+					ret = reverse_structure_bytes(value);
+			}
 		}
 
 		return ret;
@@ -285,6 +286,7 @@ public:
 	{
 		auto& val = detail::get_by_index<i>(this->m_union);
 		val = value;
+		m_type_code = typeid(T).hash_code();
 	}
 
 	template<typename T>
@@ -292,6 +294,7 @@ public:
 	{
 		auto& val = detail::get_by_type<T>(this->m_union);
 		val = value;
+		m_type_code = typeid(T).hash_code();
 	}
 
 	template<typename T>
@@ -300,6 +303,10 @@ public:
 		set(value);	
 		return *this;
 	}
+
+private:
+	using type_code = size_t;
+	type_code m_type_code = 0;
 };
 
 } // namespace evi
