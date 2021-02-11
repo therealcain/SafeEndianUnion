@@ -42,6 +42,7 @@ Since C++ does not support reflection by default yet, i couldn't check the `stru
 [alignment and padding.](http://www.catb.org/esr/structure-packing/)
 * The `struct` must be a [POD.](https://en.wikipedia.org/wiki/Passive_data_structure)
 * `evi::Union<...>` accepts only arithmetic types and a stack allocated arrays ( either `std::array<T, N>` or `array[N]` ).
+* `evi::Union<...>` will fail your compilation if you pass to it `volatile` or `const` types, it will also fail for references and pointers.
 
 ## TODO
 * Make it faster by using intrinsic functions.
