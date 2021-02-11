@@ -5,7 +5,15 @@
 #include <cstddef>
 #include <cstring>
 #include <algorithm>
+#include <array>
+#include <system_error>
 
+// Intrinsic functions
+#if defined(_MSC_VER)
+# include <intrin.h>
+#endif
+
+// -------------------------------------------------------------------------
 namespace evi { 
 
 // Forward declaration
@@ -136,10 +144,8 @@ struct is_plain_type
 {
 	static constexpr bool value = 
 		std::is_same_v<
-			std::remove_const_t<
-				std::remove_volatile_t<
-					std::remove_pointer_t<
-						std::remove_reference_t<T>>>>, 
+			std::remove_const_t<std::remove_volatile_t<
+					std::remove_pointer_t<std::remove_reference_t<T>>>>, 
 		T>;
 };
 
@@ -162,9 +168,11 @@ template<typename T>
 struct is_union_possible_type 
 {
 	static constexpr bool value = 
-		is_plain_type_v<T> && 
-		(is_struct_standard_layout_v<T> || is_bounded_array_v<T> || std::is_arithmetic_v<T>) &&
-		!std::is_union_v<T> &&
+		is_plain_type_v<T> 				 && 
+		 (is_struct_standard_layout_v<T> || 
+		  is_bounded_array_v<T> 		 || 
+		  std::is_arithmetic_v<T>) 		 &&
+		!std::is_union_v<T> 			 &&
 		!std::is_enum_v<T>;
 };
 
@@ -172,36 +180,104 @@ template<typename T>
 static constexpr bool is_union_possible_type_v = is_union_possible_type<T>::value;
 // -------------------------------------------------------------------------
 
-class SwapEndian
+class swap_endian
 {
 private:
 	template<typename T>
-	static inline T reverse_bits(T src)
+	[[nodiscard]]
+	static inline T byte_order_swap(T value)
+		requires ( sizeof(T) == sizeof(uint16_t) && std::is_integral_v<T> )
 	{
-		T dest = src;
+#if defined(_MSC_VER)
+		return _byteswap_ushort(value);
+#elif defined(__GNUC__) || defined(__clang__)
+		return __builtin_bswap16(value);
+#else
+		return (value >> 8) | (value << 8);
+#endif
+	}
 
-		while(src > 0)
-		{
-			dest <<= 1;
+	template<typename T>
+	[[nodiscard]]
+	static inline T byte_order_swap(T value)
+		requires ( sizeof(T) == sizeof(uint32_t) && std::is_integral_v<T> )
+	{
+#if defined(_MSC_VER)
+		return _byteswap_ulong(value);
+#elif defined(__GNUC__) || defined(__clang__)
+		return __builtin_bswap32(value);
+#else
+		return ( value >> 24) 			   |
+			   ((value << 8) & 0x00FF0000) | 
+			   ((value >> 8) & 0x0000FF00) |
+			   ( value << 24);
+#endif
+	}
 
-			if(src & 1 == 1)
-				dest ^= 1;
+	template<typename T>
+	[[nodiscard]]
+	static inline T byte_order_swap(T value)
+		requires ( sizeof(T) == sizeof(uint64_t) && std::is_integral_v<T> )
+	{
+#if defined(_MSC_VER)
+		return _byteswap_uint64(value);
+#elif defined(__GNUC__) || defined(__clang__)
+		return __builtin_bswap64(value);
+#else
+		return ( value >> 56) 						|
+			   ((value << 40) & 0x00FF000000000000) |
+			   ((value << 24) & 0x0000FF0000000000) |
+			   ((value <<  8) & 0x000000FF00000000) |
+			   ((value >>  8) & 0x00000000FF000000) |
+			   ((value >> 24) & 0x0000000000FF0000) |
+			   ((value >> 40) & 0x000000000000FF00) |
+			   ( value << 56);
+#endif
+	}
 
-			src >>= 1;
-		}
+	template<typename T>
+	[[nodiscard]]
+	static inline T byte_order_swap(T value)
+		requires ( sizeof(float) == sizeof(uint32_t) && std::is_floating_point_v<T> )
+	{
+		uint32_t temp;
+		std::memcpy(&temp, reinterpret_cast<const void*>(&value), sizeof(uint32_t));
+		temp = byte_order_swap(temp);
+		std::memcpy(&value, reinterpret_cast<void*>(&temp), sizeof(float));
+		
+		return value;
+	}
 
-		return dest;
+	template<typename T>
+	[[nodiscard]]
+	static inline T byte_order_swap(T value)
+		requires ( sizeof(double) == sizeof(uint64_t) && std::is_floating_point_v<T> )
+	{
+		uint64_t temp;
+		std::memcpy(&temp, reinterpret_cast<const void*>(&value), sizeof(uint64_t));
+		temp = byte_order_swap(temp);
+		std::memcpy(&value, reinterpret_cast<void*>(&temp), sizeof(double));
+		
+		return value;
+	}
+
+	template<typename T>
+	[[nodiscard]]
+	static inline T byte_order_swap(T value) {
+		throw std::system_error("Type size is unknown.");
 	}
 
 public:
 	template<typename T>
+	[[nodiscard]]
 	static inline T swap(T value)
 		requires( std::is_arithmetic_v<T> )
 	{
-		return reverse_bits(value);
+		return byte_order_swap(value);
 	}
 
 	template<typename T>
+	[[nodiscard]]
 	static inline T swap(const T& src)
 	{
 		T dest;
@@ -257,7 +333,7 @@ private:
 		if constexpr(endian != std::endian::native)
 		{
 			if(m_type_code != typeid(T).hash_code())
-				ret = detail::SwapEndian::swap(value);
+				ret = detail::swap_endian::swap(value);
 		}
 
 		return ret;
