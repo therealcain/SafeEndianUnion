@@ -95,11 +95,11 @@ Since C++ does not support reflection by default yet, i couldn't check the `stru
 * Compiler: GNU G++-10.
 * Compiler Flags: O3.
 * Little Endian was tested on my machine.
-* Big Endian was tested with qemu and mips compiler.
+* Big Endian was tested with qemu and mips compiler under WSL2.
 ### Results:
 * RGBA to HEX and HEX to RGBA:
-** Little Endian: NOT YET.
-** Big Endian: NOT YET.
+* * Little Endian: NOT YET.
+* * Big Endian: NOT YET.
 
 ## TODO
 * Make it faster by using intrinsic functions.
