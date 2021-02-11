@@ -4,10 +4,8 @@
 #include <type_traits>
 #include <cstddef>
 #include <cstring>
-#include <iostream>
 #include <climits>
 #include <cmath>
-
 #include <algorithm>
 
 namespace evi { 
@@ -209,7 +207,7 @@ class SafeEndianUnion
 {
 private:
 	template<typename T>
-	static inline T reverse_structure_bytes(const T& src) 
+	static constexpr T reverse_structure_bytes(const T& src) 
 	{
 		T dest;
 		std::memcpy(&dest, &src, sizeof(T));
@@ -221,7 +219,7 @@ private:
 	}
 
 	template<typename T>
-	static inline T reverse_primitive_bytes(T src)
+	static constexpr T reverse_primitive_bytes(T src)
 	{
 		T dest = src;
 
@@ -239,7 +237,7 @@ private:
 	}
 
 	template<typename T>
-	static inline T check_and_fix_endianness(const T& value)
+	static constexpr T check_and_fix_endianness(const T& value)
 	{
 		T ret = value;
 
@@ -255,32 +253,52 @@ private:
 	}
 
 public:
+	constexpr SafeEndianUnion() noexcept = default;
+
+	constexpr SafeEndianUnion(const SafeEndianUnion& other) {
+		this->m_union = other.m_union;
+	}
+
+	constexpr auto operator=(const SafeEndianUnion& other)
+	{
+		this->m_union = other.m_union;
+		return *this;
+	}
+
 	template<size_t i>
-	const auto get_by_index() 
+	constexpr auto get()
 	{
 		auto value = detail::get_by_index<i>(this->m_union);
 		return check_and_fix_endianness(value);
+
 	}
 
 	template<typename T>
-	const auto get_by_type()
+	constexpr auto get()
 	{
 		T& value = detail::get_by_type<T>(this->m_union);
 		return check_and_fix_endianness(value);
 	}
 
 	template<size_t i, typename T>
-	void set_by_index(const T& value) 
+	constexpr void set(const T& value)
 	{
 		auto& val = detail::get_by_index<i>(this->m_union);
 		val = value;
 	}
 
 	template<typename T>
-	void set_by_type(const T& value)
+	constexpr void set(const T& value)
 	{
 		auto& val = detail::get_by_type<T>(this->m_union);
 		val = value;
+	}
+
+	template<typename T>
+	constexpr auto operator=(const T& value) 
+	{
+		set(value);	
+		return *this;
 	}
 };
 
