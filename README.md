@@ -103,3 +103,4 @@ Since C++ does not support reflection by default yet, i couldn't check the `stru
 
 ## TODO
 * Make it faster by using intrinsic functions.
+* Add reflection.
