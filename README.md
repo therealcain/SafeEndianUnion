@@ -35,6 +35,6 @@ A = 255
 ```
 
 ## Rules
-Since C++ does not support reflection by default yet, i couldn't check the `struct` fields, so please avoid the following when declaring your `struct`:
+Since C++ does not support reflection by default yet, i couldn't check the `struct` fields, so please avoid the following when making your `struct`:
 * Do not use pointers in your `struct`s, this could break the union.
 * Do not have different types in your struct, stick to only one type, this may change the size of the `struct` due to alignment and padding.
