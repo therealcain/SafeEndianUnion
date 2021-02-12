@@ -114,6 +114,3 @@ To enable it you can simply define it before you include the [SafeEndianUnion.hp
 * RGBA to HEX and HEX to RGBA:
 * * Little Endian: NOT YET.
 * * Big Endian: NOT YET.
-
-## TODO
-* Add reflection.
