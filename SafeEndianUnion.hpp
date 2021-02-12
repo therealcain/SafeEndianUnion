@@ -529,13 +529,25 @@ public:
 	constexpr SafeEndianUnion() noexcept = default;
 	
 	template<typename T>
-	constexpr SafeEndianUnion(const T& value) { set(value); }
+	constexpr SafeEndianUnion(const T& value) { 
+		set(value); 
+	}
 
-	constexpr SafeEndianUnion(const SafeEndianUnion& other) {
+	constexpr SafeEndianUnion(const SafeEndianUnion& other) noexcept {
 		this->m_union = other.m_union;
 	}
 
-	constexpr auto operator=(const SafeEndianUnion& other)
+	constexpr SafeEndianUnion(SafeEndianUnion&& other) noexcept {
+		this->m_union = other.m_union;
+	}
+
+	constexpr auto operator=(const SafeEndianUnion& other) noexcept
+	{
+		this->m_union = other.m_union;
+		return *this;
+	}
+
+	constexpr auto operator=(SafeEndianUnion&& other) noexcept
 	{
 		this->m_union = other.m_union;
 		return *this;
@@ -561,8 +573,7 @@ public:
 	}
 
 	template<typename T>
-	constexpr void set(const T& value)
-	{
+	constexpr void set(const T& value) {
 		assign_value(value);
 	}
 
