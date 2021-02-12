@@ -120,7 +120,7 @@ struct UnionImpl
 	static constexpr size_t data_size = std::max({sizeof(Ts)...});
 	// using data_t = typename std::aligned_union_t<data_size, Ts...>;
 
-    using data_t = std::array<std::byte, data_size>;
+        using data_t = std::array<std::byte, data_size>;
 	data_t data;
 };
 
@@ -187,8 +187,8 @@ struct is_plain_type
 {
 	static constexpr bool value = 
 		std::is_same_v<
-			std::remove_const_t<std::remove_volatile_t<
-					std::remove_pointer_t<std::remove_reference_t<T>>>>, 
+			std::remove_cv_t<
+				std::remove_pointer_t<std::remove_reference_t<T>>>>, 
 		T>;
 };
 
