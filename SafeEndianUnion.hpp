@@ -178,11 +178,25 @@ struct is_union_possible_type
 
 template<typename T>
 static constexpr bool is_union_possible_type_v = is_union_possible_type<T>::value;
-// -------------------------------------------------------------------------
 
+// -------------------------------------------------------------------------
+// Swap endiannes:
+// - 8 bytes - remain the same.
+// - 16 bytes
+// - 32 bytes
+// - 64 bytes
+// - Others may cause compile-time errors.
 class swap_endian
 {
 private:
+	template<typename T>
+	[[nodiscard]]
+	static inline T byte_order_swap(T value)
+		requires ( sizeof(T) == sizeof(uint8_t) )
+	{
+		return value;
+	}
+	
 	template<typename T>
 	[[nodiscard]]
 	static inline T byte_order_swap(T value)
@@ -262,15 +276,15 @@ private:
 	}
 
 	template<typename T>
-	[[nodiscard]]
+	[[nodiscard]] [[noreturn]]
 	static inline T byte_order_swap(T value) {
-		throw std::system_error("Type size is unknown.");
+		static_assert(std::is_same_v<T, void>, "System has unknown size.");
 	}
 
 public:
 	template<typename T>
 	[[nodiscard]]
-	static inline T swap(T value)
+	static inline T swap(const T& value)
 		requires( std::is_arithmetic_v<T> )
 	{
 		return byte_order_swap(value);
@@ -279,6 +293,7 @@ public:
 	template<typename T>
 	[[nodiscard]]
 	static inline T swap(const T& src)
+		// requires data structure or array
 	{
 		T dest;
 		std::memcpy(&dest, &src, sizeof(T));
