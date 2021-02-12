@@ -85,7 +85,7 @@ Z = 0
 C = 1
 ```
 
-Try it yourself on [godbolt](https://godbolt.org/z/Gsd5sT)!
+Try it yourself on [godbolt](https://godbolt.org/z/3sq3xT)!
 
 ## Rules
 * Do not use pointers or references in your `struct`s, this could break the union.
