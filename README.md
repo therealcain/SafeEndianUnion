@@ -95,7 +95,7 @@ Since C++ does not support reflection by default yet, i couldn't check the `stru
 * `evi::Union<...>` accepts only arithmetic types and a stack allocated arrays ( either `std::array<T, N>` or `array[N]` ).
 * `evi::Union<...>` will fail your compilation if you pass to it `volatile` or `const` types, it will also fail for references and pointers.
 * If you having hard time debugging your program, and you believe it may be the `SafeEndianUnion` try to enable the the reflection system, it will check if your types in the `struct` are valid.
-* You can use bit fields only if the reflection system is not enabled, because [bit fields are not recommended](https://stackoverflow.com/a/23458891/8298564).
+* You can use bit fields only if the reflection system is NOT enabled, because [bit fields are not recommended](https://stackoverflow.com/a/23458891/8298564).
 * If the reflection system is ON then your `struct` is limited only up to 32 fields.
 
 ## Benchmark
