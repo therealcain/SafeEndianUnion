@@ -94,7 +94,7 @@ Since C++ does not support reflection by default yet, i couldn't check the `stru
 * CPU: Ryzen 7 3700x.
 * Compiler: GNU G++-10.
 * Compiler Flags: O3.
-* Little Endian was tested on my machine.
+* Little Endian was tested on my machine ( Windows 10 ).
 * Big Endian was tested with qemu and mips compiler under WSL2.
 ### Results:
 * RGBA to HEX and HEX to RGBA:
