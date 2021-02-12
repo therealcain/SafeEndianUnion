@@ -1,5 +1,3 @@
-#pragma once
-
 #include <bit>
 #include <type_traits>
 #include <cstddef>
@@ -8,6 +6,8 @@
 #include <array>
 #include <system_error>
 #include <tuple>
+#include <utility>
+#include <memory>
 
 // Intrinsic functions for MSVC
 #if defined(_MSC_VER)
@@ -24,6 +24,11 @@ class Union;
 namespace detail {
 
 // -------------------------------------------------------------------------
+
+// This code is causing undefined behivour, because of
+// C++ Type Punning strict rules.
+// http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c183-dont-use-a-union-for-type-punning
+#if 0 
 // Union Implementation for variadic elements
 template <typename, typename...>
 union UnionImpl;
@@ -46,7 +51,7 @@ struct getter_index
 {
 	template<typename... Ts>
 	[[nodiscard]]
-	static inline auto& get(UnionImpl<Ts...>& u) {
+	static constexpr auto& get(UnionImpl<Ts...>& u) {
 		return getter_index<i - 1>::get(u.rest);
 	}
 };
@@ -56,14 +61,14 @@ struct getter_index<0>
 {
 	template<typename T, typename... Ts>
 	[[nodiscard]]
-	static inline auto& get(UnionImpl<T, Ts...>& u) {
+	static constexpr auto& get(UnionImpl<T, Ts...>& u) {
 		return u.value;
 	}
 };
 
 template<size_t i, typename... Ts>
 [[nodiscard]] 
-static inline auto& get_by_index(UnionImpl<Ts...>& u) 
+static constexpr auto& get_by_index(UnionImpl<Ts...>& u) 
 {
 	static_assert(i < sizeof...(Ts), "index is too big!");
 	return getter_index<i>::get(u);
@@ -76,7 +81,7 @@ struct getter_type
 {
 	template<typename... Ts>
 	[[nodiscard]]
-	static inline Ret& get(UnionImpl<Ts...>& u) 
+	static constexpr Ret& get(UnionImpl<Ts...>& u) 
 	{
 		if constexpr(std::is_same_v<decltype(u.value), Ret>)
 			return u.value;
@@ -90,7 +95,7 @@ struct getter_type<0, Ret>
 {
 	template<typename T, typename... Ts>
 	[[nodiscard]]
-	static inline Ret& get(UnionImpl<T, Ts...>& u) 
+	static constexpr Ret& get(UnionImpl<T, Ts...>& u) 
 	{
 		if constexpr(std::is_same_v<decltype(u.value), Ret>)
 			return u.value;
@@ -102,11 +107,48 @@ struct getter_type<0, Ret>
 
 template<typename T, typename... Ts>
 [[nodiscard]]
-static inline T& get_by_type(UnionImpl<Ts...>& u) 
+static constexpr T& get_by_type(UnionImpl<Ts...>& u) 
 {
 	static_assert(std::disjunction_v<std::is_same<T, Ts>...>, "T does not exists in the union.");
 	return getter_type<sizeof...(Ts) - 1, T>::get(u);
 }
+#else
+
+template<typename... Ts>
+struct UnionImpl 
+{
+	static constexpr size_t data_size = std::max({sizeof(Ts)...});
+	// using data_t = typename std::aligned_union_t<data_size, Ts...>;
+
+    using data_t = std::array<std::byte, data_size>;
+	data_t data;
+};
+
+template<typename T, typename... Ts>
+static constexpr void set_data(const T& value, UnionImpl<Ts...>& u) 
+{
+    static_assert(std::disjunction_v<std::is_same<T, Ts>...>, "T does not exists in the union.");
+    u.data = std::bit_cast<decltype(u.data)>(value);
+}
+
+template<size_t i, typename... Ts>
+[[nodiscard]]
+static constexpr auto get_by_index(UnionImpl<Ts...>& u)
+{
+	static_assert(i < sizeof...(Ts), "index is too big!");
+	using element_t = typename std::tuple_element_t<i, std::tuple<Ts...>>;
+	return std::bit_cast<element_t>(u.data);
+}
+
+template<typename T, typename... Ts>
+[[nodiscard]]
+static constexpr T get_by_type(UnionImpl<Ts...>& u)
+{
+	static_assert(std::disjunction_v<std::is_same<T, Ts>...>, "T does not exists in the union.");
+	return std::bit_cast<T>(u.data);
+}
+
+#endif
 
 // -------------------------------------------------------------------------
 // Checks if type is an Union
@@ -473,70 +515,66 @@ private:
 	}
 
 	template<typename T>
-	inline void assign_value(T& dest, const T& value)
+	constexpr void assign_value(const T& value)
 	{
 		m_type_code = typeid(T).hash_code();
 	
 		if constexpr(detail::is_struct_standard_layout_v<T> || detail::is_bounded_array_v<T>)
-			dest = check_and_fix_endianness(value);
+			set_data(check_and_fix_endianness(value), this->m_union);
 		else
-			dest = value;
+			set_data(value, this->m_union);
 	}
 
 public:
-	SafeEndianUnion() noexcept = default;
+	constexpr SafeEndianUnion() noexcept = default;
 	
 	template<typename T>
-	SafeEndianUnion(const T& value) { set(value); }
+	constexpr SafeEndianUnion(const T& value) { set(value); }
 
-	SafeEndianUnion(const SafeEndianUnion& other) {
+	constexpr SafeEndianUnion(const SafeEndianUnion& other) {
 		this->m_union = other.m_union;
 	}
 
-	auto operator=(const SafeEndianUnion& other)
+	constexpr auto operator=(const SafeEndianUnion& other)
 	{
 		this->m_union = other.m_union;
 		return *this;
 	}
 
 	template<size_t i>
-	auto get()
+	constexpr auto get()
 	{
 		auto value = detail::get_by_index<i>(this->m_union);
 		return check_and_fix_endianness(value);
 	}
 
 	template<typename T>
-	auto get()
+	constexpr auto get()
 	{
-		T& value = detail::get_by_type<T>(this->m_union);
+		T value = detail::get_by_type<T>(this->m_union);
 		return check_and_fix_endianness(value);
 	}
 
 	template<size_t i, typename T>
-	void set(const T& value)
-	{
-		auto& ref = detail::get_by_index<i>(this->m_union);
-		assign_value(ref, value);
+	constexpr void set(const T& value) {
+        assign_value(value);
 	}
 
 	template<typename T>
-	void set(const T& value)
+	constexpr void set(const T& value)
 	{
-		auto& ref = detail::get_by_type<T>(this->m_union);
-		assign_value(ref, value);
+		assign_value(value);
 	}
 
 	template<typename T>
-	auto operator=(const T& value) 
+	constexpr auto operator=(const T& value) 
 	{
-		set(value);	
+		assign_value(value);
 		return *this;
 	}
 
-
 	template<typename T>
-	bool holds_alternative() noexcept {
+	constexpr bool holds_alternative() noexcept {
 		return typeid(T).hash_code() == m_type_code;
 	}
 
