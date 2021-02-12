@@ -16,11 +16,14 @@ int main()
     // First parameter: specify the order of the struct.
     // Second parameter: expanding the union to:
     // union { unsigned int; RGBA; };
-    evi::SafeEndianUnion<evi::ByteOrder::Big, evi::Union<unsigned int /*hex*/, RGBA>> uni;
+    evi::SafeEndianUnion<evi::ByteOrder::Big, evi::Union<unsigned int, RGBA>> uni;
     uni = 0xAABBCCFF;
     
     auto as_struct = uni.get<RGBA>();
     std::cout << "R = " << (int)as_struct.r << "\nG = " << (int)as_struct.g << "\nB = " << (int)as_struct.b << "\nA = " << (int)as_struct.a << "\n";
+
+    auto as_hex = uni.get<0>();
+    std::cout << "HEX = " << std::hex << +as_hex << "\n";
 }
 ```
 
@@ -31,7 +34,7 @@ G = 187
 B = 204
 A = 255
 ```
-Test it yourself on [godbolt!](https://godbolt.org/z/zW5nnc)
+Test it yourself on [godbolt!](https://godbolt.org/z/n6498h)
 
 ### Status Flags
 ```cpp
