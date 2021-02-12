@@ -35,7 +35,7 @@ B = 204
 A = 255
 HEX = aabbccff
 ```
-Test it yourself on [godbolt!](https://godbolt.org/z/saGT66)
+Test it yourself on [godbolt!](https://godbolt.org/z/Yoq4qa)
 
 ### Status Flags
 ```cpp
