@@ -33,6 +33,7 @@ R = 170
 G = 187
 B = 204
 A = 255
+HEX = aabbccff
 ```
 Test it yourself on [godbolt!](https://godbolt.org/z/n6498h)
 
