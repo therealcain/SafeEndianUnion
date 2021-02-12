@@ -107,9 +107,9 @@ Since C++ does not support reflection by default yet, i couldn't check the `stru
 * Big Endian was tested with qemu and mips compiler under WSL2.
 ### Results:
 * RGBA to HEX:
-* Bitwise Operations: NOT YET.
-* C union, [`ntohl`](https://linux.die.net/man/3/ntohl) and `inline` endianness check: NOT YET.
-* SafeEndianUnion: NOT YET.
+* - Bitwise Operations: NOT YET.
+* - C union, [`ntohl`](https://linux.die.net/man/3/ntohl) and `inline` endianness check: NOT YET.
+* - SafeEndianUnion: NOT YET.
 
 ## How to use?
 It's just a [simple header](https://github.com/therealcain/SafeEndianUnion/blob/main/SafeEndianUnion.hpp) to drop into your project, and just run.
