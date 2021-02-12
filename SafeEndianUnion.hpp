@@ -187,8 +187,8 @@ struct is_plain_type
 {
 	static constexpr bool value = 
 		std::is_same_v<
-			std::remove_const_t<std::remove_volatile_t<
-					std::remove_pointer_t<std::remove_reference_t<T>>>>, 
+			std::remove_cv_t<
+				std::remove_pointer_t<std::remove_reference_t<T>>>, 
 		T>;
 };
 
