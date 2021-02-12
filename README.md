@@ -98,14 +98,6 @@ Since C++ does not support reflection by default yet, i couldn't check the `stru
 * You can use bit fields only if the reflection system is not enabled, because [bit fields are not recommended](https://stackoverflow.com/a/23458891/8298564).
 * If the reflection system is ON then your `struct` is limited only up to 32 fields.
 
-### Enable/Disable The Reflection System
-The reflection system is disabled by default.
-To enable it you can simply define it before you include the [SafeEndianUnion.hpp](https://github.com/therealcain/SafeEndianUnion/blob/main/SafeEndianUnion.hpp):
-```cpp
-#define EVI_ENABLE_REFLECTION_SYSTEM
-#include "SafeEndianUnion.hpp"
-```
-
 ## Benchmark
 ### Info:
 * CPU: Ryzen 7 3700x.
@@ -119,9 +111,17 @@ To enable it you can simply define it before you include the [SafeEndianUnion.hp
 * * Big Endian: NOT YET.
 
 ## How to use?
-It's just a simple header to drop into your project, and just run.
+It's just a [simple header](https://github.com/therealcain/SafeEndianUnion/blob/main/SafeEndianUnion.hpp) to drop into your project, and just run.
 
 Here are a few fair points:
 * It does not use any external libraries ( like Boost ), so you don't have to link anything.
 * Make sure you enable concepts in your compilers. ( in GCC and Clang it's `-fconcepts` ).
 * Make sure the compiler is using C++20. ( in GCC and Clang it's `-std=++2a` or `-std=++20` ).
+
+### Enable/Disable The Reflection System
+The reflection system is disabled by default.
+To enable it you can simply define it before you include the SafeEndianUnion header:
+```cpp
+#define EVI_ENABLE_REFLECTION_SYSTEM
+#include "SafeEndianUnion.hpp"
+```
