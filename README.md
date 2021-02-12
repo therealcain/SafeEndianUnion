@@ -3,7 +3,7 @@
 `SafeEndianUnion` is a class written in C++20, that using in the underlying implementation a C `union` with endianness safety, that doesn't matter what you do, it will work on Little Endian and Big Endian machines.
 Many times people avoid using `union` since their endianness problem, and using bitwise operations to not rely on the endianness of the targeted machine, but these bitwise operations are very ugly most of the case, and can make developers hard to understand it, `union` solves the bitwise ugliness, and make the code more elegant, and now it solves also the endianness issue.
 
-## Usage Example:
+## Usage Examples:
 
 ### Converting an RGBA value to hex and hex to RGBA:
 ```cpp
