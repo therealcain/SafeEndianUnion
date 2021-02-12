@@ -40,7 +40,7 @@ Test it yourself on [godbolt!](https://godbolt.org/z/n6498h)
 ### Status Flags
 ```cpp
 // Bit fields are not allowed by the reflection system.
-#unfdef EVI_ENABLE_REFLECTION_SYSTEM
+#undef EVI_ENABLE_REFLECTION_SYSTEM
 
 struct StatusFlags
 {
