@@ -594,3 +594,4 @@ private:
 	type_code m_type_code = 0;
 };
 	
+} // namespace evi
