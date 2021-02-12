@@ -1,6 +1,6 @@
 # Safe Endian Union
 ## What is it?
-`SafeEndianUnion`is a class written in C++20, that using in the underlying implementation a C `union` with endianness safety, that doesn't matter what you do, it will work on Little Endian and Big Endian machines.
+`SafeEndianUnion` is a class written in C++20, that using in the underlying implementation a C `union` with endianness safety, that doesn't matter what you do, it will work on Little Endian and Big Endian machines.
 Many times people avoid using `union` since their endianness problem, and using bitwise operations to not rely on the endianness of the targeted machine, but these bitwise operations are very ugly most of the case, and can make developers hard to understand it, `union` solves the bitwise ugliness, and make the code more elegant, and now it solves also the endianness issue.
 
 ## Usage Example:
@@ -117,3 +117,9 @@ To enable it you can simply define it before you include the [SafeEndianUnion.hp
 * RGBA to HEX and HEX to RGBA:
 * * Little Endian: NOT YET.
 * * Big Endian: NOT YET.
+
+## How to use?
+It's just a simple header to drop into your project, and just run.
+* It does not use any external libraries ( like Boost ).
+* Make sure you enable concepts in your compilers. ( in GCC and Clang it's `-fconcepts` ).
+* Make sure the compiler is using C++20. ( in GCC and Clang it's `-std=++2a` or `-std=++20` ).
