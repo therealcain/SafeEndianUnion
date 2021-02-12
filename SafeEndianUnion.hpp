@@ -7,8 +7,9 @@
 #include <algorithm>
 #include <array>
 #include <system_error>
+#include <tuple>
 
-// Intrinsic functions
+// Intrinsic functions for MSVC
 #if defined(_MSC_VER)
 # include <intrin.h>
 #endif
@@ -167,17 +168,25 @@ static constexpr bool is_struct_standard_layout_v = is_struct_standard_layout<T>
 template<typename T>
 struct is_union_possible_type 
 {
-	static constexpr bool value = 
-		is_plain_type_v<T> 				 && 
-		 (is_struct_standard_layout_v<T> || 
-		  is_bounded_array_v<T> 		 || 
-		  std::is_arithmetic_v<T>) 		 &&
-		!std::is_union_v<T> 			 &&
-		!std::is_enum_v<T>;
+	static constexpr bool value = is_plain_type_v<T> 
+		&& (is_struct_standard_layout_v<T> || is_bounded_array_v<T> || std::is_arithmetic_v<T>) 
+		&& !std::is_union_v<T> 
+		&& !std::is_enum_v<T>;
 };
 
 template<typename T>
 static constexpr bool is_union_possible_type_v = is_union_possible_type<T>::value;
+
+// Checks if a type is a possiblity member in a struct.
+template<typename T>
+struct is_possible_type_in_struct
+{
+	static constexpr bool value = is_plain_type_v<T> && 
+		(is_bounded_array_v<T> || std::is_arithmetic_v<T>);
+};
+
+template<typename T>
+static constexpr bool is_possible_type_in_struct_v = is_possible_type_in_struct<T>::value;
 
 // -------------------------------------------------------------------------
 // Swap endiannes:
@@ -310,6 +319,109 @@ public:
 	}
 };
 
+#ifdef EVI_ENABLE_REFLECTION_SYSTEM
+// -------------------------------------------------------------------------
+// Simple reflection system to validate the types inside a struct.
+
+// Class is convertible to anything.
+struct UniversalType
+{
+	template<typename T>
+	operator T() const;
+};
+
+// Counting the amount of members in a POD.
+// NOTE: This only works for aggregate types.
+template<typename T, typename... Ts>
+// can be also consteval
+constexpr auto count_member_fields(Ts... members)
+{
+	if constexpr( requires { T{members...}; } == false )
+		return sizeof...(members) - 1;
+	else
+		return count_member_fields<T>(members..., UniversalType{});
+} 
+
+// Template specialization up to 32 fields in a struct.
+template<size_t size, typename T>
+struct StructToTuple;
+
+#define __EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(STRUCT, FIELDS_NUM, ...) \
+	template<typename T> 											  	   \
+	struct STRUCT<FIELDS_NUM, T> { 									       \
+		constexpr static auto unevaluated(T& u) 					       \
+		{															       \
+			auto&& [__VA_ARGS__] = u;									   \
+			return std::tuple{__VA_ARGS__};								   \
+		}																   \
+	}
+
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 2 , m1, m2);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 3 , m1, m2, m3);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 4 , m1, m2, m3, m4);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 5 , m1, m2, m3, m4, m5);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 6 , m1, m2, m3, m4, m5, m6);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 7 , m1, m2, m3, m4, m5, m6, m7);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 8 , m1, m2, m3, m4, m5, m6, m7, m8);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 9 , m1, m2, m3, m4, m5, m6, m7, m8, m9);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 10, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 11, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 12, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 13, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 14, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 15, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 16, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 17, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 18, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 19, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 20, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 21, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 22, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21, m22);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 23, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21, m22, m23);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 24, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 25, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24, m25);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 26, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24, m25, m26);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 27, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24, m25, m26, m27);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 28, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24, m25, m26, m27, m28);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 29, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24, m25, m26, m27, m28, m29);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 30, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24, m25, m26, m27, m28, m29, m30);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 31, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24, m25, m26, m27, m28, m29, m30, m31);
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 32, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24, m25, m26, m27, m28, m29, m30, m31, m32);
+
+// Checking all of the members in a tuple to validate them.
+template<typename T, typename... Ts>
+static constexpr bool check_tuple_types(std::tuple<T, Ts...>*) 
+{
+	constexpr bool first_member = is_possible_type_in_struct_v<T>;
+	constexpr bool rest_members = std::conjunction_v<is_possible_type_in_struct<Ts>...>;
+	constexpr bool all_same     = std::conjunction_v<std::is_same<T, Ts>...>;
+
+	return first_member && rest_members && all_same;
+}
+
+// Converting the struct to tuple and validating it.
+template<typename T>
+constexpr bool validate_possible_structs()
+	requires ( std::is_class_v<T> )
+{
+	constexpr auto size = count_member_fields<T>();
+	if constexpr(size >= 2)
+	{
+		using U = std::invoke_result_t<decltype(StructToTuple<size, T>::unevaluated), T&>;
+		return check_tuple_types((U*)nullptr);
+	}
+	
+	return true;
+}
+
+#endif // EVI_ENABLE_REFLECTION_SYSTEM
+
+template<typename T>
+constexpr bool validate_possible_structs() {
+	return true;
+}
+
+
 } // namespace detail
 
 // -------------------------------------------------------------------------
@@ -319,10 +431,11 @@ class Union
 {
 	static_assert(sizeof...(Ts) > 0, "Insufficient amount of types.");
 	static_assert(std::conjunction_v<detail::is_union_possible_type<Ts>...>, "Type is incorrect!");
+	static_assert((detail::validate_possible_structs<Ts>() && ...), "Types in your struct is incorrect!");
 
 protected:
 	detail::UnionImpl<Ts...> m_union;
-	
+
 #if 0
 public:
 	Union() { std::cout << sizeof(m_union) << std::endl; }
