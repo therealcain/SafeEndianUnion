@@ -421,6 +421,12 @@ public:
 		return *this;
 	}
 
+
+	template<typename T>
+	bool holds_alternative() noexcept {
+		return typeid(T).hash_code() == m_type_code;
+	}
+
 private:
 	using type_code = size_t;
 	type_code m_type_code = 0;
