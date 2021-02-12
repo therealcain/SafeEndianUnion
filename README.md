@@ -35,7 +35,7 @@ B = 204
 A = 255
 HEX = aabbccff
 ```
-Test it yourself on [godbolt!](https://godbolt.org/z/n6498h)
+Test it yourself on [godbolt!](https://godbolt.org/z/saGT66)
 
 ### Status Flags
 ```cpp
@@ -44,21 +44,21 @@ Test it yourself on [godbolt!](https://godbolt.org/z/n6498h)
 
 struct StatusFlags
 {
-    unsigned int N : 1; // Negative
-    unsigned int V : 1; // Overflow
-    unsigned int U : 1; // Unused
-    unsigned int B : 1; // Break
-    unsigned int D : 1; // Decimal
-    unsigned int I : 1; // Interrupt
-    unsigned int Z : 1; // Zero
-    unsigned int C : 1; // Carry
+    bool N : 1; // Negative
+    bool V : 1; // Overflow
+    bool U : 1; // Unused
+    bool B : 1; // Break
+    bool D : 1; // Decimal
+    bool I : 1; // Interrupt
+    bool Z : 1; // Zero
+    bool C : 1; // Carry
 };
 
 int main()
 {
     evi::SafeEndianUnion<evi::ByteOrder::Big, evi::Union<uint8_t, StatusFlags>> uni;
-    uni = StatusFlags{ 0, 0, 0, 1, 1, 1, 0, 1 };
     
+    uni = StatusFlags{ 0, 0, 0, 1, 1, 1, 0, 1 };
     std::cout << std::bitset<8>(uni.get<uint8_t>()) << "\n";
     
     auto as_struct = uni.get<StatusFlags>();
