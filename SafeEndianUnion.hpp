@@ -181,7 +181,7 @@ static constexpr bool is_union_possible_type_v = is_union_possible_type<T>::valu
 
 // -------------------------------------------------------------------------
 // Swap endiannes:
-// - 8 bytes - remain the same.
+// - 8 bytes.
 // - 16 bytes
 // - 32 bytes
 // - 64 bytes
@@ -198,7 +198,7 @@ private:
 		value = (value & 0xF0) >> 4 | (value & 0x0F) << 4;
 		value = (value & 0xCC) >> 2 | (value & 0x33) << 2;
 		value = (value & 0xAA) >> 1 | (value & 0x55) << 1;
-	
+		
 		return value;
 	}
 	
@@ -359,54 +359,63 @@ private:
 		return ret;
 	}
 
+	template<typename T>
+	inline void assign_value(T& dest, const T& value)
+	{
+		m_type_code = typeid(T).hash_code();
+	
+		if constexpr(detail::is_struct_standard_layout_v<T> || detail::is_bounded_array_v<T>)
+			dest = check_and_fix_endianness(value);
+		else
+			dest = value;
+	}
+
 public:
-	constexpr SafeEndianUnion() noexcept = default;
+	SafeEndianUnion() noexcept = default;
 	
 	template<typename T>
-	constexpr SafeEndianUnion(const T& value) { set(value); }
+	SafeEndianUnion(const T& value) { set(value); }
 
-	constexpr SafeEndianUnion(const SafeEndianUnion& other) {
+	SafeEndianUnion(const SafeEndianUnion& other) {
 		this->m_union = other.m_union;
 	}
 
-	constexpr auto operator=(const SafeEndianUnion& other)
+	auto operator=(const SafeEndianUnion& other)
 	{
 		this->m_union = other.m_union;
 		return *this;
 	}
 
 	template<size_t i>
-	constexpr auto get()
+	auto get()
 	{
 		auto value = detail::get_by_index<i>(this->m_union);
 		return check_and_fix_endianness(value);
 	}
 
 	template<typename T>
-	constexpr auto get()
+	auto get()
 	{
 		T& value = detail::get_by_type<T>(this->m_union);
 		return check_and_fix_endianness(value);
 	}
 
 	template<size_t i, typename T>
-	constexpr void set(const T& value)
+	void set(const T& value)
 	{
-		auto& val = detail::get_by_index<i>(this->m_union);
-		val = value;
-		m_type_code = typeid(T).hash_code();
+		auto& ref = detail::get_by_index<i>(this->m_union);
+		assign_value(ref, value);
 	}
 
 	template<typename T>
-	constexpr void set(const T& value)
+	void set(const T& value)
 	{
-		auto& val = detail::get_by_type<T>(this->m_union);
-		val = value;
-		m_type_code = typeid(T).hash_code();
+		auto& ref = detail::get_by_type<T>(this->m_union);
+		assign_value(ref, value);
 	}
 
 	template<typename T>
-	constexpr auto operator=(const T& value) 
+	auto operator=(const T& value) 
 	{
 		set(value);	
 		return *this;
