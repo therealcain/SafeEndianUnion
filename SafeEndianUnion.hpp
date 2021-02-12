@@ -120,7 +120,7 @@ struct UnionImpl
 	static constexpr size_t data_size = std::max({sizeof(Ts)...});
 	// using data_t = typename std::aligned_union_t<data_size, Ts...>;
 
-    using data_t = std::array<std::byte, data_size>;
+        using data_t = std::array<std::byte, data_size>;
 	data_t data;
 };
 
@@ -593,5 +593,4 @@ private:
 	using type_code = size_t;
 	type_code m_type_code = 0;
 };
-
-} // namespace evi
+	
