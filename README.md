@@ -120,6 +120,8 @@ To enable it you can simply define it before you include the [SafeEndianUnion.hp
 
 ## How to use?
 It's just a simple header to drop into your project, and just run.
-* It does not use any external libraries ( like Boost ).
+
+Here are a few fair points:
+* It does not use any external libraries ( like Boost ), so you don't have to link anything.
 * Make sure you enable concepts in your compilers. ( in GCC and Clang it's `-fconcepts` ).
 * Make sure the compiler is using C++20. ( in GCC and Clang it's `-std=++2a` or `-std=++20` ).
