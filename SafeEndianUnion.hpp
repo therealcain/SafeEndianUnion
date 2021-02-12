@@ -194,6 +194,11 @@ private:
 	static inline T byte_order_swap(T value)
 		requires ( sizeof(T) == sizeof(uint8_t) )
 	{
+		// Reversing the bits.
+		value = (value & 0xF0) >> 4 | (value & 0x0F) << 4;
+		value = (value & 0xCC) >> 2 | (value & 0x33) << 2;
+		value = (value & 0xAA) >> 1 | (value & 0x55) << 1;
+	
 		return value;
 	}
 	
