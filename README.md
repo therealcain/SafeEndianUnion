@@ -117,7 +117,7 @@ It's just a [simple header](https://github.com/therealcain/SafeEndianUnion/blob/
 
 Here are a few fair points:
 * It does not use any external libraries ( like Boost ), so you don't have to link anything.
-* Make sure you enable concepts in your compilers. ( in GCC and Clang it's `-fconcepts` ).
+* Make sure you enable concepts and constraints in your compilers. ( in GCC it's `-fconcepts` ).
 * Make sure the compiler is using C++20. ( in GCC and Clang it's `-std=++2a` or `-std=++20` ).
 
 ### Enable/Disable The Reflection System
