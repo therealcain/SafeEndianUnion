@@ -17,6 +17,8 @@
 #include <array>
 // for std::tuple, std::tuple_element
 #include <tuple>
+// for std::numeric_limits
+#include <limits>
 
 // Intrinsic functions for MSVC
 #if defined(_MSC_VER)
@@ -570,7 +572,7 @@ private:
 		if constexpr(detail::is_struct_standard_layout_v<T> || detail::is_bounded_array_v<T>)
 			this->m_union.set_data(check_and_fix_endianness(value));
 		else
-            this->m_union.set_data(value);
+            		this->m_union.set_data(value);
 	}
 
 public:
@@ -636,10 +638,14 @@ public:
 	constexpr bool holds_alternative() noexcept {
 		return typeid(T).hash_code() == m_type_code;
 	}
+	
+	constexpr bool holds_anything() noexcept {
+		return m_type_code == std::numeric_limits<type_code>::max();
+	}
 
 private:
 	using type_code = size_t;
-	type_code m_type_code = 0;
+	type_code m_type_code = std::numeric_limits<type_code>::max();
 };
 
 } // namespace evi
