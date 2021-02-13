@@ -4,7 +4,7 @@
 // std::remove_reference, std::conjunction, std::disjunction,
 // std::remove_cv, std::is_standard_layout, std::is_class,
 // std::is_union, std::is_enum, std::is_bounded_array,
-// std::invoke_result
+// std::invoke_result, std::is_integral, std::is_floating_point
 #include <type_traits> 
 // for std::byte, std::size_t, std::nullptr_t
 #include <cstddef>
