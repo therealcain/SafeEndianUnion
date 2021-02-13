@@ -85,7 +85,7 @@ Z = 0
 C = 1
 ```
 
-Try it yourself on [godbolt](https://godbolt.org/z/qheEde)!
+Try it yourself on [godbolt](https://godbolt.org/z/jczsMK)!
 
 ### String Manipulation
 ```cpp
