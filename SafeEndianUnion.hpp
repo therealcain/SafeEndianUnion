@@ -338,6 +338,10 @@ private:
 	static constexpr T byte_order_swap(T value)
 		requires ( sizeof(float) == sizeof(uint32_t) && std::is_floating_point_v<T> )
 	{
+		// de-referencing float pointer as uint32_t breaks strict-aliasing rules for C++, even if it normally works.
+     		// uint32_t val = byte_order_swap(*(reinterpret_cast<const uint32_t *>(&f)));
+     		// return *(reinterpret_cast<float *>(&val));
+		
 		uint32_t temp;
 		std::memcpy(&temp, reinterpret_cast<const void*>(&value), sizeof(uint32_t));
 		temp = byte_order_swap(temp);
