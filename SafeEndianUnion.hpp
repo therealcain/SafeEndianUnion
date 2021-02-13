@@ -1,14 +1,26 @@
-#include <bit>
-#include <type_traits>
+// for std::endian, std::bit_cast
+#include <bit> 
+// for std::is_same, std::is_arithmetic, std::is_pointer, 
+// std::is_reference, std::conjunction, std::disjunction,
+// std::remove_cv, std::is_standard_layout, std::is_class,
+// std::is_union, std::is_enum, std::is_bounded_array,
+// std::invoke_result
+#include <type_traits> 
+// for std::byte, std::size_t, std::nullptr_t
 #include <cstddef>
+// for std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t
+#include <cstdint>
+// for std::memcpy
 #include <cstring>
+// for std::max
 #include <algorithm>
 #include <array>
+// for std::tuple, std::tuple_element
 #include <tuple>
-#include <utility>
 
 // Intrinsic functions for MSVC
 #if defined(_MSC_VER)
+// for _byteswap_uint64, _byteswap_ulong, _byteswap_ushort
 # include <intrin.h>
 #endif
 
@@ -144,10 +156,10 @@ public:
 private:
 	static constexpr size_t data_size = std::max({sizeof(Ts)...});
 
-    // std::aligned_union or std::aligned_storage might be better here
-    // but they require allocation on the heap with the 'new' operator
-    // but i don't want that.
-    using data_t = std::array<std::byte, data_size>;
+    	// std::aligned_union or std::aligned_storage might be better here
+    	// but they require allocation on the heap with the 'new' operator
+    	// but i don't want that.
+    	using data_t = std::array<std::byte, data_size>;
 	data_t data;
 };
 
@@ -409,13 +421,13 @@ template<size_t size, typename T>
 struct StructToTuple;
 
 #define __EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(STRUCT, FIELDS_NUM, ...) \
-	template<typename T>                                                   \
-	struct STRUCT<FIELDS_NUM, T> {                                         \
-		static constexpr auto unevaluated(T& u) noexcept                   \
-		{                                                                  \
-			auto&& [__VA_ARGS__] = u;                                      \
-			return std::tuple{__VA_ARGS__};                                \
-		}                                                                  \
+	template<typename T>                                               \
+	struct STRUCT<FIELDS_NUM, T> {                                     \
+		static constexpr auto unevaluated(T& u) noexcept           \
+		{                                                          \
+			auto&& [__VA_ARGS__] = u;                          \
+			return std::tuple{__VA_ARGS__};                    \
+		}                                                          \
 	}
 
 __EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 2 , m1, m2);
@@ -459,8 +471,8 @@ static consteval bool check_tuple_types(std::tuple<T, Ts...>*)
 	constexpr bool rest_members = std::conjunction_v<is_possible_type_in_struct<Ts>...>;
 	constexpr bool all_same     = std::conjunction_v<std::is_same<T, Ts>...>;
 
-    static_assert(first_member || rest_members, "Your struct fields are having an incorrect type.");
-    static_assert(all_same, "Your struct fields are not the same.");
+    	static_assert(first_member || rest_members, "Your struct fields are having an incorrect type.");
+    	static_assert(all_same, "Your struct fields are not the same.");
 
 	return first_member && rest_members && all_same;
 }
@@ -475,7 +487,7 @@ consteval bool validate_possible_structs()
 	if constexpr(size >= 2)
 	{
 		using U = std::invoke_result_t<decltype(StructToTuple<size, T>::unevaluated), T&>;
-        return check_tuple_types(static_cast<U*>(nullptr));
+        	return check_tuple_types(static_cast<U*>(nullptr));
 	}
 	
 	return true;
@@ -502,8 +514,8 @@ class Union
 	static_assert(std::conjunction_v<detail::is_union_possible_type<Ts>...>, "Type is incorrect!");
 	static_assert((detail::validate_possible_structs<Ts>() && ...), "Types in your struct are incorrect!");
     
-    using first_element_t = typename std::tuple_element_t<0, std::tuple<Ts...>>;
-    static_assert(((sizeof(first_element_t) == sizeof(Ts)) && ...), "Your types with different size!");
+    	using first_element_t = typename std::tuple_element_t<0, std::tuple<Ts...>>;
+    	static_assert(((sizeof(first_element_t) == sizeof(Ts)) && ...), "Your types with different size!");
 
 protected:
 	detail::UnionImpl<Ts...> m_union;
