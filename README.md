@@ -8,7 +8,7 @@ Many times people are avoiding to use `union` since their endianness problem, an
 ### Converting an RGBA value to hex and hex to RGBA:
 ```cpp
 struct RGBA { 
-    unsigned char r, g, b, a;
+    uint8_t r, g, b, a;
 };
 
 int main()
@@ -16,7 +16,7 @@ int main()
     // First parameter: specify the order of the struct.
     // Second parameter: expanding the union to:
     // union { unsigned int; RGBA; };
-    evi::SafeEndianUnion<evi::ByteOrder::Big, evi::Union<unsigned int, RGBA>> uni;
+    evi::SafeEndianUnion<evi::ByteOrder::Big, evi::Union<uint32_t, RGBA>> uni;
     uni = 0xAABBCCFF;
     
     auto as_struct = uni.get<RGBA>();
@@ -35,7 +35,7 @@ B = 204
 A = 255
 HEX = aabbccff
 ```
-Test it yourself on [godbolt!](https://godbolt.org/z/qheEde)
+Test it yourself on [godbolt](https://godbolt.org/z/qheEde)!
 
 ### Status Flags
 ```cpp
