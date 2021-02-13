@@ -139,7 +139,7 @@ Try it yourself on [godbolt](https://godbolt.org/z/M7GKsr)!
 ## Benchmark
 ### Info:
 * CPU: Ryzen 7 3700x.
-* Compiler: GNU g++ trunc.
+* Compiler: GNU g++ trunk.
 * Compiler Flags: O3.
 * Little Endian was tested on my machine ( Windows 10 ).
 * Big Endian was tested with qemu and mips g++ compiler under WSL2.
