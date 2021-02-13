@@ -35,7 +35,7 @@ B = 204
 A = 255
 HEX = aabbccff
 ```
-Test it yourself on [godbolt](https://godbolt.org/z/qheEde)!
+Test it yourself on [godbolt](https://godbolt.org/z/1E713T)!
 
 ### Status Flags
 ```cpp
@@ -85,7 +85,7 @@ Z = 0
 C = 1
 ```
 
-Try it yourself on [godbolt](https://godbolt.org/z/3sq3xT)!
+Try it yourself on [godbolt](https://godbolt.org/z/qheEde)!
 
 ### String Manipulation
 ```cpp
