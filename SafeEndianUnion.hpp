@@ -1,7 +1,7 @@
 // for std::endian, std::bit_cast
 #include <bit> 
-// for std::is_same, std::is_arithmetic, std::is_pointer, 
-// std::is_reference, std::conjunction, std::disjunction,
+// for std::is_same, std::is_arithmetic, std::remove_pointer, 
+// std::remove_reference, std::conjunction, std::disjunction,
 // std::remove_cv, std::is_standard_layout, std::is_class,
 // std::is_union, std::is_enum, std::is_bounded_array,
 // std::invoke_result
@@ -214,7 +214,7 @@ struct is_plain_type
 {
 	static constexpr bool value = 
 		std::is_same_v<
-            std::remove_cv_t<
+			std::remove_cv_t<
 				remove_pr_t<T>>, 
 		T>;
 };
