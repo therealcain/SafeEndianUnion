@@ -4,10 +4,8 @@
 #include <cstring>
 #include <algorithm>
 #include <array>
-#include <system_error>
 #include <tuple>
 #include <utility>
-#include <memory>
 
 // Intrinsic functions for MSVC
 #if defined(_MSC_VER)
@@ -613,3 +611,4 @@ private:
 };
 
 } // namespace evi
+
