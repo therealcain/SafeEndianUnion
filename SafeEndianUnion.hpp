@@ -143,8 +143,10 @@ public:
 
 private:
 	static constexpr size_t data_size = std::max({sizeof(Ts)...});
-	// using data_t = typename std::aligned_union_t<data_size, Ts...>;
 
+    // std::aligned_union or std::aligned_storage might be better here
+    // but they require allocation on the heap with the 'new' operator
+    // but i don't want that.
     using data_t = std::array<std::byte, data_size>;
 	data_t data;
 };
@@ -258,11 +260,12 @@ private:
 	static constexpr T byte_order_swap(T value)
 		requires ( sizeof(T) == sizeof(uint8_t) )
 	{
+#if 1
 		// Reversing the bits.
 		value = (value & 0xF0) >> 4 | (value & 0x0F) << 4;
 		value = (value & 0xCC) >> 2 | (value & 0x33) << 2;
 		value = (value & 0xAA) >> 1 | (value & 0x55) << 1;
-		
+#endif
 		return value;
 	}
 	
@@ -375,6 +378,8 @@ public:
 };
 
 // -------------------------------------------------------------------------
+// -------------------------------------------------------------------------
+// -------------------------------------------------------------------------
 // Simple reflection system to validate the types inside a struct.
 #ifdef EVI_ENABLE_REFLECTION_SYSTEM
 
@@ -385,6 +390,7 @@ struct UniversalType
 	operator T() const;
 };
 
+// -------------------------------------------------------------------------
 // Counting the amount of members in a POD.
 // NOTE: This only works for aggregate types.
 template<typename T, typename... Ts>
@@ -397,6 +403,7 @@ static consteval auto count_member_fields(Ts... members)
 		return count_member_fields<T>(members..., UniversalType{});
 } 
 
+// -------------------------------------------------------------------------
 // Template specialization up to 32 fields in a struct.
 template<size_t size, typename T>
 struct StructToTuple;
@@ -443,6 +450,7 @@ __EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 30, m1, m2, m3, m4, m5,
 __EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 31, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24, m25, m26, m27, m28, m29, m30, m31);
 __EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 32, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24, m25, m26, m27, m28, m29, m30, m31, m32);
 
+// -------------------------------------------------------------------------
 // Checking all of the members in a tuple to validate them.
 template<typename T, typename... Ts>
 static consteval bool check_tuple_types(std::tuple<T, Ts...>*) 
@@ -457,6 +465,7 @@ static consteval bool check_tuple_types(std::tuple<T, Ts...>*)
 	return first_member && rest_members && all_same;
 }
 
+// -------------------------------------------------------------------------
 // Converting the struct to tuple and validating it.
 template<typename T>
 consteval bool validate_possible_structs()
@@ -483,13 +492,18 @@ consteval bool validate_possible_structs()  noexcept {
 } // namespace detail
 
 // -------------------------------------------------------------------------
+// -------------------------------------------------------------------------
+// -------------------------------------------------------------------------
 // Union all of the types.
 template<typename... Ts>
 class Union
 {
 	static_assert(sizeof...(Ts) > 0, "Insufficient amount of types.");
 	static_assert(std::conjunction_v<detail::is_union_possible_type<Ts>...>, "Type is incorrect!");
-	static_assert((detail::validate_possible_structs<Ts>() && ...), "Types in your struct is incorrect!");
+	static_assert((detail::validate_possible_structs<Ts>() && ...), "Types in your struct are incorrect!");
+    
+    using first_element_t = typename std::tuple_element_t<0, std::tuple<Ts...>>;
+    static_assert(((sizeof(first_element_t) == sizeof(Ts)) && ...), "Your types with different size!");
 
 protected:
 	detail::UnionImpl<Ts...> m_union;
