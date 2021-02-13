@@ -87,6 +87,43 @@ C = 1
 
 Try it yourself on [godbolt](https://godbolt.org/z/3sq3xT)!
 
+### String Manipulation
+```cpp
+struct data
+{
+    char a[1];
+    char b[2];
+    char c[3];
+    char d[4];
+    char e[5];
+};
+
+int main()
+{
+    using array = std::array<char, sizeof(data)>;
+    evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<array, data>> uni;
+    uni.set(array{"abcdefghi"});
+
+    auto as_struct = uni.get<data>();
+    std::cout << std::string(as_struct.a, sizeof(as_struct.a)) << "\n";
+    std::cout << std::string(as_struct.b, sizeof(as_struct.b)) << "\n";
+    std::cout << std::string(as_struct.c, sizeof(as_struct.c)) << "\n";
+    std::cout << std::string(as_struct.d, sizeof(as_struct.d)) << "\n";
+    std::cout << std::string(as_struct.e, sizeof(as_struct.e)) << "\n";
+}
+```
+
+And the output on both endianness is: 
+
+```
+a
+bc
+def
+ghi
+```
+
+Try it yourself on [godbolt](https://godbolt.org/z/M7GKsr)!
+
 ## Rules
 * Do not use pointers or references in your `struct`s, this could break the union.
 * Do not have different types in your struct, stick to only one type, this may change the size of the `struct` due to
