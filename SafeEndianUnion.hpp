@@ -141,8 +141,8 @@ public:
     constexpr auto get_by_index()
     {
         static_assert(i < sizeof...(Ts), "index is too big!");
-	    using element_t = typename std::tuple_element_t<i, std::tuple<Ts...>>;
-	    return std::bit_cast<element_t>(data);
+	using element_t = typename std::tuple_element_t<i, std::tuple<Ts...>>;
+	return std::bit_cast<element_t>(data);
     }
 
     template<typename T>
@@ -150,7 +150,7 @@ public:
     constexpr auto get_by_type()
     {
         static_assert(std::disjunction_v<std::is_same<T, Ts>...>, "T does not exists in the union.");
-	    return std::bit_cast<T>(data);
+	return std::bit_cast<T>(data);
     }
 
 private:
