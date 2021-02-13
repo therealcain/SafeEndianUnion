@@ -261,20 +261,20 @@ static constexpr bool is_possible_type_in_struct_v = is_possible_type_in_struct<
 
 // -------------------------------------------------------------------------
 // Swap endiannes:
-// - 8 bytes.
-// - 16 bytes
-// - 32 bytes
-// - 64 bytes
+// - 8 bits.
+// - 16 bits
+// - 32 bits
+// - 64 bits
 // - Others may cause compile-time errors.
 class SwapEndian
 {
 private:
 	template<typename T>
 	[[nodiscard]]
-	static constexpr T byte_order_swap(T value)
-		requires ( sizeof(T) == sizeof(uint8_t) )
+	static constexpr T byte_order_swap(T value) // byte
+		requires ( sizeof(T) == sizeof(uint8_t) ) 
 	{
-#if 1
+#if 0
 		// Reversing the bits.
 		value = (value & 0xF0) >> 4 | (value & 0x0F) << 4;
 		value = (value & 0xCC) >> 2 | (value & 0x33) << 2;
@@ -285,8 +285,8 @@ private:
 	
 	template<typename T>
 	[[nodiscard]]
-	static constexpr T byte_order_swap(T value)
-		requires ( sizeof(T) == sizeof(uint16_t) && std::is_integral_v<T> )
+	static constexpr T byte_order_swap(T value) // 2 bytes
+		requires ( sizeof(T) == sizeof(uint16_t) && std::is_integral_v<T> ) 
 	{
 #if defined(_MSC_VER)
 		return _byteswap_ushort(value);
@@ -299,8 +299,8 @@ private:
 
 	template<typename T>
 	[[nodiscard]]
-	static constexpr T byte_order_swap(T value)
-		requires ( sizeof(T) == sizeof(uint32_t) && std::is_integral_v<T> )
+	static constexpr T byte_order_swap(T value) // 4 bytes
+		requires ( sizeof(T) == sizeof(uint32_t) && std::is_integral_v<T> ) 
 	{
 #if defined(_MSC_VER)
 		return _byteswap_ulong(value);
@@ -316,8 +316,8 @@ private:
 
 	template<typename T>
 	[[nodiscard]]
-	static constexpr T byte_order_swap(T value)
-		requires ( sizeof(T) == sizeof(uint64_t) && std::is_integral_v<T> )
+	static constexpr T byte_order_swap(T value) // 8 bytes
+		requires ( sizeof(T) == sizeof(uint64_t) && std::is_integral_v<T> ) 
 	{
 #if defined(_MSC_VER)
 		return _byteswap_uint64(value);
@@ -337,8 +337,8 @@ private:
 
 	template<typename T>
 	[[nodiscard]]
-	static constexpr T byte_order_swap(T value)
-		requires ( sizeof(float) == sizeof(uint32_t) && std::is_floating_point_v<T> )
+	static constexpr T byte_order_swap(T value) // 4 bytes
+		requires ( sizeof(float) == sizeof(uint32_t) && std::is_floating_point_v<T> ) 
 	{
 		// de-referencing float pointer as uint32_t breaks strict-aliasing rules for C++, even if it normally works.
      		// uint32_t temp = byte_order_swap(*(reinterpret_cast<const uint32_t*>(&value)));
@@ -354,7 +354,7 @@ private:
 
 	template<typename T>
 	[[nodiscard]]
-	static constexpr T byte_order_swap(T value)
+	static constexpr T byte_order_swap(T value) // 8 bytes
 		requires ( sizeof(double) == sizeof(uint64_t) && std::is_floating_point_v<T> )
 	{
 		uint64_t temp;
@@ -640,12 +640,13 @@ public:
 	}
 	
 	constexpr bool holds_anything() noexcept {
-		return m_type_code == std::numeric_limits<type_code>::max();
+		return m_type_code == TYPE_CODE_EMPTY;
 	}
 
 private:
 	using type_code = size_t;
-	type_code m_type_code = std::numeric_limits<type_code>::max();
+	static constexpr type_code TYPE_CODE_EMPTY = std::numeric_limits<type_code>::max();
+	type_code m_type_code = TYPE_CODE_EMPTY;
 };
 
 } // namespace evi
