@@ -139,10 +139,10 @@ Try it yourself on [godbolt](https://godbolt.org/z/M7GKsr)!
 ## Benchmark
 ### Info:
 * CPU: Ryzen 7 3700x.
-* Compiler: GNU g++-10.
+* Compiler: GNU g++ trunc.
 * Compiler Flags: O3.
 * Little Endian was tested on my machine ( Windows 10 ).
-* Big Endian was tested with qemu and mips g++-10 compiler under WSL2.
+* Big Endian was tested with qemu and mips g++ compiler under WSL2.
 ### Results:
 * RGBA to HEX:
 * - Bitwise Operations: NOT YET.
