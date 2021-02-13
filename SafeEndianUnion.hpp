@@ -640,7 +640,7 @@ public:
 	}
 	
 	constexpr bool holds_anything() noexcept {
-		return m_type_code == TYPE_CODE_EMPTY;
+		return m_type_code != TYPE_CODE_EMPTY;
 	}
 
 private:
