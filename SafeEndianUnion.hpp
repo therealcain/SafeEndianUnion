@@ -103,7 +103,7 @@ enum class endian
 // Implementation of std::bit_cast since some compilers are still
 // not supporting this function.
 template<typename To, typename From>
-constexpr To bit_cast(const From& from) noexcept 
+constexpr To bitcast(const From& from) noexcept 
 {
 #ifdef __cpp_lib_bit_cast
 	return std::bit_cast<To>(from);
@@ -218,7 +218,7 @@ public:
     constexpr void set_data(const T& value)
     {
         static_assert(std::disjunction_v<std::is_same<T, Ts>...>, "T does not exists in the union.");
-        data = bit_cast<decltype(data)>(value);
+        data = bitcast<decltype(data)>(value);
     }
 
     template<size_t i>
@@ -227,7 +227,7 @@ public:
     {
         static_assert(i < sizeof...(Ts), "index is too big!");
 		using element_t = typename std::tuple_element_t<i, std::tuple<Ts...>>;
-		return bit_cast<element_t>(data);
+		return bitcast<element_t>(data);
     }
 
     template<typename T>
@@ -235,7 +235,7 @@ public:
     constexpr auto get_by_type()
     {
         static_assert(std::disjunction_v<std::is_same<T, Ts>...>, "T does not exists in the union.");
-		return bit_cast<T>(data);
+		return bitcast<T>(data);
     }
 
 private:
