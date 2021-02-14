@@ -651,6 +651,9 @@ private:
 			if(m_type_code != typeid(T).hash_code())
 				ret = detail::BitsManipulation::swap_endian(value);
 			
+			// When assigning a value that it's only one byte, the big endian
+			// and the little endian are having the bits reversed, so this is
+			// just resetting the bits for the appropiate machine.
 			else if constexpr(std::is_integral_v<T> && sizeof(T) == sizeof(uint8_t))
 				ret = detail::BitsManipulation::reverse_bits(value);
 		}
