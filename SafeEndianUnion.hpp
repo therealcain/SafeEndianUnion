@@ -267,10 +267,6 @@ template<typename T>
 concept only_union = is_union_v<T>;
 
 // -------------------------------------------------------------------------
-template<typename T>
-concept only_integral = std::is_integral_v<T>;
-
-// -------------------------------------------------------------------------
 // Check if a type is std::array<T, N> or array[N]
 // array[] will cause a compile-time error.
 template<typename T>
@@ -367,7 +363,7 @@ private:
 	template<typename T>
 	[[nodiscard]]
 	static constexpr T byte_order_swap(T value) noexcept // 2 bytes
-		requires ( sizeof(T) == sizeof(uint16_t) && std::is_integral_v<T> ) 
+		requires ( sizeof(T) == sizeof(uint16_t) ) 
 	{
 #if defined(_MSC_VER)
 		return _byteswap_ushort(value);
@@ -475,8 +471,7 @@ public:
 		return *reinterpret_cast<T*>(dest_casted);
 	}
 
-	template<only_integral T>
-	static constexpr T reverse_bits(T value)
+	static constexpr uint8_t reverse_bits(uint8_t value)
 	{
 		value = (value & 0xF0) >> 4 | (value & 0x0F) << 4;
 		value = (value & 0xCC) >> 2 | (value & 0x33) << 2;
@@ -650,10 +645,9 @@ private:
 			if(m_type_code != typeid(T).hash_code())
 				ret = detail::BitsManipulation::swap_endian(value);
 			
-			// When assigning a value that it's only one byte, the big endian
-			// and the little endian are having the bits reversed, so this is
-			// just resetting the bits for the appropiate machine.
-			else if constexpr(std::is_integral_v<T> && sizeof(T) == sizeof(uint8_t))
+			// If you have containers or structures then the bits in one of the
+			// endianness are reversed from the other, this is just reversing them.
+			else if constexpr(sizeof(T) == sizeof(uint8_t))
 				ret = detail::BitsManipulation::reverse_bits(value);
 		}
 
