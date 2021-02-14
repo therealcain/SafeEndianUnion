@@ -25,9 +25,8 @@
 // for std::is_same, std::is_arithmetic, std::remove_pointer, 
 // std::remove_reference, std::conjunction, std::disjunction,
 // std::remove_cv, std::is_standard_layout, std::is_class,
-// std::is_union, std::is_enum, std::is_bounded_array,
-// std::invoke_result, std::is_integral, std::is_floating_point,
-// std::is_trivially_copyable
+// std::is_enum, std::is_bounded_array, std::invoke_result, 
+// std::is_integral, std::is_floating_point, std::is_trivially_copyable
 #include <type_traits> 
 // for std::byte, std::size_t, std::nullptr_t
 #include <cstddef>
@@ -497,7 +496,7 @@ struct UniversalType
 // Counting the amount of members in a POD.
 // NOTE: This only works for aggregate types.
 template<typename T, typename... Ts>
-static __EVI_CONSTEVAL auto count_member_fields(Ts... members)
+__EVI_CONSTEVAL auto count_member_fields(Ts... members)
 {
 	if constexpr( requires { T{members...}; } == false )
 		return sizeof...(members) - 1;
@@ -557,7 +556,7 @@ __EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 32, m1, m2, m3, m4, m5,
 // -------------------------------------------------------------------------
 // Checking all of the members in a tuple to validate them.
 template<typename T, typename... Ts>
-static __EVI_CONSTEVAL bool check_tuple_types(std::tuple<T, Ts...>*) 
+__EVI_CONSTEVAL bool check_tuple_types(std::tuple<T, Ts...>*) 
 {
 	constexpr bool first_member = is_possible_type_in_struct_v<T>;
 	constexpr bool rest_members = std::conjunction_v<is_possible_type_in_struct<Ts>...>;
@@ -572,7 +571,7 @@ static __EVI_CONSTEVAL bool check_tuple_types(std::tuple<T, Ts...>*)
 // -------------------------------------------------------------------------
 // Converting the struct to tuple and validating it.
 template<typename T>
-static __EVI_CONSTEVAL bool validate_possible_structs()
+__EVI_CONSTEVAL bool validate_possible_structs()
 	requires ( std::is_class_v<T> )
 {
 	constexpr auto size = count_member_fields<T>();
@@ -588,7 +587,7 @@ static __EVI_CONSTEVAL bool validate_possible_structs()
 #endif // EVI_ENABLE_REFLECTION_SYSTEM
 
 template<typename T>
-static consteval bool validate_possible_structs()  noexcept {
+__EVI_CONSTEVAL bool validate_possible_structs()  noexcept {
 	return true;
 }
 
