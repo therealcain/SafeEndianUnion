@@ -1,10 +1,9 @@
-// for std::endian, std::bit_cast
-#include <bit> 
 // for std::is_same, std::is_arithmetic, std::remove_pointer, 
 // std::remove_reference, std::conjunction, std::disjunction,
 // std::remove_cv, std::is_standard_layout, std::is_class,
 // std::is_union, std::is_enum, std::is_bounded_array,
-// std::invoke_result, std::is_integral, std::is_floating_point
+// std::invoke_result, std::is_integral, std::is_floating_point,
+// std:is_trivially_copyable
 #include <type_traits> 
 // for std::byte, std::size_t, std::nullptr_t
 #include <cstddef>
@@ -20,10 +19,48 @@
 // for std::numeric_limits
 #include <limits>
 
+// Many compilers are still not supporting this.
+#if __has_include(<bit>)
+// for std::endian, std::bit_cast
+# include <bit> 
+#endif
+
+// -------------------------------------------------------------------------
 // Intrinsic functions for MSVC
 #if defined(_MSC_VER)
 // for _byteswap_uint64, _byteswap_ulong, _byteswap_ushort
 # include <intrin.h>
+#endif
+
+// -------------------------------------------------------------------------
+// Some compilers are still not supporting this keyword.
+#ifdef __cpp_consteval
+# define __EVI_CONSTEVAL consteval
+#else
+# define __EVI_CONSTEVAL constexpr
+#endif
+
+// -------------------------------------------------------------------------
+#ifndef __cpp_lib_endian
+// for BOOST_ENDIAN_BIG_BYTE, BOOST_ENDIAN_LITTLE_BYTE
+# if __has_include(<boost/predef/other/endian.h>)
+# include <boost/predef/other/endian.h>
+namespace std {
+enum class endian 
+{
+	little = BOOST_ENDIAN_BIG_BYTE,
+	big    = BOOST_ENDIAN_LITTLE_BYTE,
+
+#  ifdef BOOST_ENDIAN_BIG_BYTE
+	native = big
+#  else
+	native = little
+#  endif
+};
+};
+# else
+#  error "Your C++ compiler does not support std::endian, please update your compiler or install boost libs."
+# endif
 #endif
 
 // -------------------------------------------------------------------------
@@ -36,7 +73,25 @@ class Union;
 namespace detail {
 
 // -------------------------------------------------------------------------
+// Implementation of std::bit_cast since some compilers are still
+// not supporting this function.
+template<typename To, typename From>
+static constexpr To bit_cast(const From& from) noexcept 
+{
+#ifdef __cpp_lib_bit_cast
+	return std::bit_cast<To>(from);
+#else
+	static_assert(sizeof(To) == sizeof(From));
+	static_assert(std::is_trivially_copyable_v<To>);
+	static_assert(std::is_trivially_copyable_v<From>);
 
+	To dest;
+	std::memcpy(&dest, &from, sizeof(To));
+	return dest;
+#endif
+}
+
+// -------------------------------------------------------------------------
 // This code is causing undefined behivour, because of
 // C++ Type Punning strict rules.
 // http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c183-dont-use-a-union-for-type-punning
@@ -124,6 +179,7 @@ static constexpr T& get_by_type(UnionImpl<Ts...>& u)
 	static_assert(std::disjunction_v<std::is_same<T, Ts>...>, "T does not exists in the union.");
 	return getter_type<sizeof...(Ts) - 1, T>::get(u);
 }
+
 #else
 
 template<typename... Ts>
@@ -135,7 +191,7 @@ public:
     constexpr void set_data(const T& value)
     {
         static_assert(std::disjunction_v<std::is_same<T, Ts>...>, "T does not exists in the union.");
-        data = std::bit_cast<decltype(data)>(value);
+        data = bit_cast<decltype(data)>(value);
     }
 
     template<size_t i>
@@ -143,8 +199,8 @@ public:
     constexpr auto get_by_index()
     {
         static_assert(i < sizeof...(Ts), "index is too big!");
-	using element_t = typename std::tuple_element_t<i, std::tuple<Ts...>>;
-	return std::bit_cast<element_t>(data);
+		using element_t = typename std::tuple_element_t<i, std::tuple<Ts...>>;
+		return bit_cast<element_t>(data);
     }
 
     template<typename T>
@@ -152,16 +208,16 @@ public:
     constexpr auto get_by_type()
     {
         static_assert(std::disjunction_v<std::is_same<T, Ts>...>, "T does not exists in the union.");
-	return std::bit_cast<T>(data);
+		return bit_cast<T>(data);
     }
 
 private:
 	static constexpr size_t data_size = std::max({sizeof(Ts)...});
 
-    	// std::aligned_union or std::aligned_storage might be better here
-    	// but they require allocation on the heap with the 'new' operator
-    	// but i don't want that.
-    	using data_t = std::array<std::byte, data_size>;
+   	// std::aligned_union or std::aligned_storage might be better here
+   	// but they require allocation on the heap with the 'new' operator
+   	// but i don't want that.
+   	using data_t = std::array<std::byte, data_size>;
 	data_t data;
 };
 
@@ -203,7 +259,7 @@ template<typename T>
 struct remove_pr
 {
     using type = typename std::remove_pointer_t<
-        typename std::remove_reference_t<T>>;
+    typename std::remove_reference_t<T>>;
 };
 
 template<typename T>
@@ -271,7 +327,7 @@ class SwapEndian
 private:
 	template<typename T>
 	[[nodiscard]]
-	static constexpr T byte_order_swap(T value) // byte
+	static constexpr T byte_order_swap(T value) noexcept // byte
 		requires ( sizeof(T) == sizeof(uint8_t) ) 
 	{
 #if 0
@@ -285,7 +341,7 @@ private:
 	
 	template<typename T>
 	[[nodiscard]]
-	static constexpr T byte_order_swap(T value) // 2 bytes
+	static constexpr T byte_order_swap(T value) noexcept // 2 bytes
 		requires ( sizeof(T) == sizeof(uint16_t) && std::is_integral_v<T> ) 
 	{
 #if defined(_MSC_VER)
@@ -299,7 +355,7 @@ private:
 
 	template<typename T>
 	[[nodiscard]]
-	static constexpr T byte_order_swap(T value) // 4 bytes
+	static constexpr T byte_order_swap(T value) noexcept // 4 bytes
 		requires ( sizeof(T) == sizeof(uint32_t) && std::is_integral_v<T> ) 
 	{
 #if defined(_MSC_VER)
@@ -316,7 +372,7 @@ private:
 
 	template<typename T>
 	[[nodiscard]]
-	static constexpr T byte_order_swap(T value) // 8 bytes
+	static constexpr T byte_order_swap(T value) noexcept // 8 bytes
 		requires ( sizeof(T) == sizeof(uint64_t) && std::is_integral_v<T> ) 
 	{
 #if defined(_MSC_VER)
@@ -367,7 +423,7 @@ private:
 
 	template<typename T>
 	[[nodiscard]] [[noreturn]]
-	static constexpr T byte_order_swap(T value) {
+	static constexpr T byte_order_swap(T) noexcept {
 		static_assert(std::is_same_v<T, void>, "System has unknown size.");
 	}
 
@@ -412,8 +468,7 @@ struct UniversalType
 // Counting the amount of members in a POD.
 // NOTE: This only works for aggregate types.
 template<typename T, typename... Ts>
-// can be also consteval
-static consteval auto count_member_fields(Ts... members)
+static __EVI_CONSTEVAL auto count_member_fields(Ts... members)
 {
 	if constexpr( requires { T{members...}; } == false )
 		return sizeof...(members) - 1;
@@ -427,13 +482,13 @@ template<size_t size, typename T>
 struct StructToTuple;
 
 #define __EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(STRUCT, FIELDS_NUM, ...) \
-	template<typename T>                                               \
-	struct STRUCT<FIELDS_NUM, T> {                                     \
-		static constexpr auto unevaluated(T& u) noexcept           \
-		{                                                          \
-			auto&& [__VA_ARGS__] = u;                          \
-			return std::tuple{__VA_ARGS__};                    \
-		}                                                          \
+	template<typename T>                                                   \
+	struct STRUCT<FIELDS_NUM, T> {                                         \
+		static constexpr auto unevaluated(T& u) noexcept          		   \
+		{                                                          		   \
+			auto&& [__VA_ARGS__] = u;                          			   \
+			return std::tuple{__VA_ARGS__};                    			   \
+		}                                                          		   \
 	}
 
 // Yeah, Nasty...
@@ -473,14 +528,14 @@ __EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 32, m1, m2, m3, m4, m5,
 // -------------------------------------------------------------------------
 // Checking all of the members in a tuple to validate them.
 template<typename T, typename... Ts>
-static consteval bool check_tuple_types(std::tuple<T, Ts...>*) 
+static __EVI_CONSTEVAL bool check_tuple_types(std::tuple<T, Ts...>*) 
 {
 	constexpr bool first_member = is_possible_type_in_struct_v<T>;
 	constexpr bool rest_members = std::conjunction_v<is_possible_type_in_struct<Ts>...>;
 	constexpr bool all_same     = std::conjunction_v<std::is_same<T, Ts>...>;
 
-    	static_assert(first_member || rest_members, "Your struct fields are having an incorrect type.");
-    	static_assert(all_same, "Your struct fields are not the same.");
+   	static_assert(first_member || rest_members, "Your struct fields are having an incorrect type.");
+   	static_assert(all_same, "Your struct fields are not the same.");
 
 	return first_member && rest_members && all_same;
 }
@@ -488,14 +543,14 @@ static consteval bool check_tuple_types(std::tuple<T, Ts...>*)
 // -------------------------------------------------------------------------
 // Converting the struct to tuple and validating it.
 template<typename T>
-consteval bool validate_possible_structs()
+__EVI_CONSTEVAL bool validate_possible_structs()
 	requires ( std::is_class_v<T> )
 {
 	constexpr auto size = count_member_fields<T>();
 	if constexpr(size >= 2)
 	{
 		using U = std::invoke_result_t<decltype(StructToTuple<size, T>::unevaluated), T&>;
-        	return check_tuple_types(static_cast<U*>(nullptr));
+       	return check_tuple_types(static_cast<U*>(nullptr));
 	}
 	
 	return true;
@@ -522,8 +577,8 @@ class Union
 	static_assert(std::conjunction_v<detail::is_union_possible_type<Ts>...>, "Type is incorrect!");
 	static_assert((detail::validate_possible_structs<Ts>() && ...), "Types in your struct are incorrect!");
     
-    	using first_element_t = typename std::tuple_element_t<0, std::tuple<Ts...>>;
-    	static_assert(((sizeof(first_element_t) == sizeof(Ts)) && ...), "Your types with different size!");
+    using first_element_t = typename std::tuple_element_t<0, std::tuple<Ts...>>;
+    static_assert(((sizeof(first_element_t) == sizeof(Ts)) && ...), "Your types with different size!");
 
 protected:
 	detail::UnionImpl<Ts...> m_union;
@@ -572,7 +627,7 @@ private:
 		if constexpr(detail::is_struct_standard_layout_v<T> || detail::is_bounded_array_v<T>)
 			this->m_union.set_data(check_and_fix_endianness(value));
 		else
-            		this->m_union.set_data(value);
+       		this->m_union.set_data(value);
 	}
 
 public:
@@ -619,7 +674,7 @@ public:
 
 	template<size_t i, typename T>
 	constexpr void set(const T& value) {
-        	assign_value(value);
+       	assign_value(value);
 	}
 
 	template<typename T>
@@ -633,7 +688,7 @@ public:
 		assign_value(value);
 		return *this;
 	}
-
+	
 	template<typename T>
 	constexpr bool holds_alternative() noexcept {
 		return typeid(T).hash_code() == m_type_code;
