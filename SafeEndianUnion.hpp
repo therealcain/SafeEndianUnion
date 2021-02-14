@@ -65,6 +65,12 @@
 
 namespace evi {
 // -------------------------------------------------------------------------
+// Forward declaration
+template<typename... Ts>
+class Union;
+
+namespace detail {
+// -------------------------------------------------------------------------
 // In case std::endian is not available.
 #ifdef __cpp_lib_endian
 enum class endian
@@ -92,13 +98,6 @@ enum class endian
 #   error "Your C++ compiler does not support std::endian, please update your compiler or install boost libs."
 # endif
 #endif
-
-// -------------------------------------------------------------------------
-// Forward declaration
-template<typename... Ts>
-class Union;
-
-namespace detail {
 
 // -------------------------------------------------------------------------
 // Implementation of std::bit_cast since some compilers are still
@@ -629,8 +628,8 @@ public:
 // Which endianness the struct is.
 enum class ByteOrder 
 { 
-	Little = static_cast<int>(endian::little), 
-	Big    = static_cast<int>(endian::big)
+	Little = static_cast<int>(detail::endian::little), 
+	Big    = static_cast<int>(detail::endian::big)
 };
 
 // -------------------------------------------------------------------------
@@ -645,8 +644,8 @@ private:
 	{
 		T ret = value;
 
-		static constexpr auto endian = static_cast<enum endian>(Endianness);
-		if constexpr(endian != endian::native)
+		static constexpr auto endian = static_cast<detail::endian>(Endianness);
+		if constexpr(endian != detail::endian::native)
 		{
 			if(m_type_code != typeid(T).hash_code())
 				ret = detail::BitsManipulation::swap_endian(value);
