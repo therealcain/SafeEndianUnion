@@ -268,6 +268,10 @@ template<typename T>
 concept only_union = is_union_v<T>;
 
 // -------------------------------------------------------------------------
+template<typename T>
+concept only_integral = std::is_integral_v<T>;
+
+// -------------------------------------------------------------------------
 // Check if a type is std::array<T, N> or array[N]
 // array[] will cause a compile-time error.
 template<typename T>
@@ -344,26 +348,20 @@ template<typename T>
 inline constexpr bool is_possible_type_in_struct_v = is_possible_type_in_struct<T>::value;
 
 // -------------------------------------------------------------------------
-// Swap endiannes:
-// - 8 bits.
-// - 16 bits
-// - 32 bits
-// - 64 bits
-// - Others may cause compile-time errors.
-class SwapEndian
+class BitsManipulation
 {
 private:
+	// Swap endiannes:
+	// - 8 bits.
+	// - 16 bits
+	// - 32 bits
+	// - 64 bits
+	// - Others may cause compile-time errors.
 	template<typename T>
 	[[nodiscard]]
 	static constexpr T byte_order_swap(T value) noexcept // byte
 		requires ( sizeof(T) == sizeof(uint8_t) ) 
 	{
-#if 0
-		// Reversing the bits.
-		value = (value & 0xF0) >> 4 | (value & 0x0F) << 4;
-		value = (value & 0xCC) >> 2 | (value & 0x33) << 2;
-		value = (value & 0xAA) >> 1 | (value & 0x55) << 1;
-#endif
 		return value;
 	}
 	
@@ -458,7 +456,7 @@ private:
 public:
 	template<typename T>
 	[[nodiscard]]
-	static constexpr T swap(const T& value)
+	static constexpr T swap_endian(const T& value)
 		requires( std::is_arithmetic_v<T> )
 	{
 		return byte_order_swap(value);
@@ -466,7 +464,7 @@ public:
 
 	template<typename T>
 	[[nodiscard]]
-	static constexpr T swap(const T& src)
+	static constexpr T swap_endian(const T& src)
 		// requires data structure or array
 	{
 		T dest;
@@ -476,6 +474,16 @@ public:
 		std::reverse(dest_casted, dest_casted + sizeof(T));
 
 		return *reinterpret_cast<T*>(dest_casted);
+	}
+
+	template<only_integral T>
+	static constexpr T reverse_bits(T value)
+	{
+		value = (value & 0xF0) >> 4 | (value & 0x0F) << 4;
+		value = (value & 0xCC) >> 2 | (value & 0x33) << 2;
+		value = (value & 0xAA) >> 1 | (value & 0x55) << 1;
+
+		return value;
 	}
 };
 
@@ -641,21 +649,20 @@ private:
 		if constexpr(endian != endian::native)
 		{
 			if(m_type_code != typeid(T).hash_code())
-				ret = detail::SwapEndian::swap(value);
+				ret = detail::BitsManipulation::swap_endian(value);
+			
+			else if constexpr(std::is_integral_v<T> && sizeof(T) == sizeof(uint8_t))
+				ret = detail::BitsManipulation::reverse_bits(value);
 		}
 
 		return ret;
 	}
 
 	template<typename T>
-	constexpr void assign_value(const T& value)
+	constexpr void assign_value(T& value)
 	{
 		m_type_code = typeid(T).hash_code();
-	
-		if constexpr(detail::is_struct_standard_layout_v<T> || detail::is_bounded_array_v<T>)
-			this->m_union.set_data(check_and_fix_endianness(value));
-		else
-       		this->m_union.set_data(value);
+		this->m_union.set_data(check_and_fix_endianness(value));
 	}
 
 public:
@@ -663,7 +670,7 @@ public:
 	
 	template<typename T>
 	constexpr SafeEndianUnion(const T& value) { 
-		set(value); 
+		assign_value(value); 
 	}
 
 	constexpr SafeEndianUnion(const SafeEndianUnion& other) noexcept {
