@@ -1,9 +1,33 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2021 Eviatar
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 // for std::is_same, std::is_arithmetic, std::remove_pointer, 
 // std::remove_reference, std::conjunction, std::disjunction,
 // std::remove_cv, std::is_standard_layout, std::is_class,
 // std::is_union, std::is_enum, std::is_bounded_array,
 // std::invoke_result, std::is_integral, std::is_floating_point,
-// std:is_trivially_copyable
+// std::is_trivially_copyable
 #include <type_traits> 
 // for std::byte, std::size_t, std::nullptr_t
 #include <cstddef>
@@ -40,32 +64,37 @@
 # define __EVI_CONSTEVAL constexpr
 #endif
 
+namespace evi {
 // -------------------------------------------------------------------------
-#ifndef __cpp_lib_endian
+// In case std::endian is not available.
+#ifdef __cpp_lib_endian
+enum class endian
+{
+	little = static_cast<int>(std::endian::little),
+	big    = static_cast<int>(std::endian::big),
+	native = static_cast<int>(std::endian::native)
+};
+#else
 // for BOOST_ENDIAN_BIG_BYTE, BOOST_ENDIAN_LITTLE_BYTE
 # if __has_include(<boost/predef/other/endian.h>)
-# include <boost/predef/other/endian.h>
-namespace std {
+#  include <boost/predef/other/endian.h>
 enum class endian 
 {
 	little = BOOST_ENDIAN_BIG_BYTE,
 	big    = BOOST_ENDIAN_LITTLE_BYTE,
 
-#  ifdef BOOST_ENDIAN_BIG_BYTE
+#   ifdef BOOST_ENDIAN_BIG_BYTE
 	native = big
-#  else
+#   else
 	native = little
-#  endif
+#   endif
 };
-};
-# else
-#  error "Your C++ compiler does not support std::endian, please update your compiler or install boost libs."
+#  else
+#   error "Your C++ compiler does not support std::endian, please update your compiler or install boost libs."
 # endif
 #endif
 
 // -------------------------------------------------------------------------
-namespace evi { 
-
 // Forward declaration
 template<typename... Ts>
 class Union;
@@ -76,7 +105,7 @@ namespace detail {
 // Implementation of std::bit_cast since some compilers are still
 // not supporting this function.
 template<typename To, typename From>
-static constexpr To bit_cast(const From& from) noexcept 
+constexpr To bit_cast(const From& from) noexcept 
 {
 #ifdef __cpp_lib_bit_cast
 	return std::bit_cast<To>(from);
@@ -234,7 +263,7 @@ struct is_union<Union<Ts...>>
 	: std::true_type {};
 
 template<typename T>
-static constexpr bool is_union_v = is_union<T>::value;
+inline constexpr bool is_union_v = is_union<T>::value;
 
 template<typename T>
 concept only_union = is_union_v<T>;
@@ -251,7 +280,7 @@ struct is_bounded_array<std::array<T, Len>>
 	: std::true_type {};
 
 template<typename T>
-static constexpr bool is_bounded_array_v = is_bounded_array<T>::value;
+inline constexpr bool is_bounded_array_v = is_bounded_array<T>::value;
 
 // -------------------------------------------------------------------------
 // Remove pointer / reference.
@@ -278,7 +307,7 @@ struct is_plain_type
 };
 
 template<typename T>
-static constexpr bool is_plain_type_v = is_plain_type<T>::value;
+inline constexpr bool is_plain_type_v = is_plain_type<T>::value;
 
 // -------------------------------------------------------------------------
 // Checks if a struct is POD aka standard layout.
@@ -288,7 +317,7 @@ struct is_struct_standard_layout {
 };
 
 template<typename T>
-static constexpr bool is_struct_standard_layout_v = is_struct_standard_layout<T>::value;
+inline constexpr bool is_struct_standard_layout_v = is_struct_standard_layout<T>::value;
 
 // -------------------------------------------------------------------------
 // Checks if a type is an union possiblity
@@ -302,7 +331,7 @@ struct is_union_possible_type
 };
 
 template<typename T>
-static constexpr bool is_union_possible_type_v = is_union_possible_type<T>::value;
+inline constexpr bool is_union_possible_type_v = is_union_possible_type<T>::value;
 
 // Checks if a type is a possiblity member in a struct.
 template<typename T>
@@ -313,7 +342,7 @@ struct is_possible_type_in_struct
 };
 
 template<typename T>
-static constexpr bool is_possible_type_in_struct_v = is_possible_type_in_struct<T>::value;
+inline constexpr bool is_possible_type_in_struct_v = is_possible_type_in_struct<T>::value;
 
 // -------------------------------------------------------------------------
 // Swap endiannes:
@@ -543,7 +572,7 @@ static __EVI_CONSTEVAL bool check_tuple_types(std::tuple<T, Ts...>*)
 // -------------------------------------------------------------------------
 // Converting the struct to tuple and validating it.
 template<typename T>
-__EVI_CONSTEVAL bool validate_possible_structs()
+static __EVI_CONSTEVAL bool validate_possible_structs()
 	requires ( std::is_class_v<T> )
 {
 	constexpr auto size = count_member_fields<T>();
@@ -559,7 +588,7 @@ __EVI_CONSTEVAL bool validate_possible_structs()
 #endif // EVI_ENABLE_REFLECTION_SYSTEM
 
 template<typename T>
-consteval bool validate_possible_structs()  noexcept {
+static consteval bool validate_possible_structs()  noexcept {
 	return true;
 }
 
@@ -593,8 +622,8 @@ public:
 // Which endianness the struct is.
 enum class ByteOrder 
 { 
-	Little = static_cast<int>(std::endian::little), 
-	Big    = static_cast<int>(std::endian::big)
+	Little = static_cast<int>(endian::little), 
+	Big    = static_cast<int>(endian::big)
 };
 
 // -------------------------------------------------------------------------
@@ -609,8 +638,8 @@ private:
 	{
 		T ret = value;
 
-		static constexpr std::endian endian = static_cast<std::endian>(Endianness);
-		if constexpr(endian != std::endian::native)
+		static constexpr auto endian = static_cast<enum endian>(Endianness);
+		if constexpr(endian != endian::native)
 		{
 			if(m_type_code != typeid(T).hash_code())
 				ret = detail::SwapEndian::swap(value);

@@ -135,6 +135,7 @@ Try it yourself on [godbolt](https://godbolt.org/z/M7GKsr)!
 * You can use bit fields only if the reflection system is NOT enabled, because [bit fields are not recommended](https://stackoverflow.com/a/23458891/8298564).
 * `std::bit_cast` might fail if you use bit fields.
 * If the reflection system is ON then your `struct` is limited only up to 32 fields.
+* If you don't have std::endian it will use boost.
 
 ## Benchmark
 ### Info:
