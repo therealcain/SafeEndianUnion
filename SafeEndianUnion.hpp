@@ -39,8 +39,6 @@
 #include <array>
 // for std::tuple, std::tuple_element
 #include <tuple>
-// for std::numeric_limits
-#include <limits>
 
 // Many compilers are still not supporting this.
 #if __has_include(<bit>)
@@ -56,11 +54,17 @@
 #endif
 
 // -------------------------------------------------------------------------
-// Some compilers are still not supporting this keyword.
+// Some compilers are still not supporting these keywords.
 #ifdef __cpp_consteval
 # define __EVI_CONSTEVAL consteval
 #else
 # define __EVI_CONSTEVAL constexpr
+#endif
+
+#ifdef __cpp_constinit
+# define __EVI_CONSTINIT constinit
+#else
+# define __EVI_CONSTINIT constexpr
 #endif
 
 namespace evi {
@@ -500,12 +504,62 @@ template<typename T>
 __EVI_CONSTEVAL bool validate_possible_structs()  noexcept {
 	return true;
 }
+// -------------------------------------------------------------------------
+// ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
+// -------------------------------------------------------------------------
 
+// Getting the index of a type!
+template<size_t i, typename T, typename... Ts>
+__EVI_CONSTEVAL size_t get_type_index() noexcept
+{
+	using first_element_t = typename std::tuple_element_t<i, std::tuple<Ts...>>;
+
+	if constexpr(std::is_same_v<T, first_element_t>)
+		return i;
+	else
+		return get_type_index<i + 1, T, Ts...>();
+}
+
+template<typename T, typename... Ts>
+__EVI_CONSTEVAL size_t get_type_index() noexcept 
+{
+		static_assert(std::disjunction_v<std::is_same<T, Ts>...>, "T is not found in the varaidic elements!");
+
+	return get_type_index<0, T, Ts...>();
+}
+
+// -------------------------------------------------------------------------
+// Holds the the index of a variadic template, at compile-time.
+template<typename... Ts>
+class TypeInfo
+{
+	using type_code_t = size_t;
+
+public:
+	constexpr TypeInfo() noexcept 
+		: m_current_type(NoneCode) {}
+
+	template<typename T>
+	constexpr void set_type() noexcept
+	{
+		// the indexes starts from 0, and 0 is the NoneCode.
+		m_current_type = get_type_index<T, Ts...>() + 1; 
+	}	
+
+	constexpr type_code_t get_type() const noexcept { 
+		return m_current_type;
+	}
+
+public:
+	inline static __EVI_CONSTINIT type_code_t NoneCode = 0;
+
+private:
+	inline static __EVI_CONSTINIT type_code_t Size = sizeof...(Ts) + 1;
+	type_code_t m_current_type;
+};
 
 } // namespace detail
 
-// -------------------------------------------------------------------------
-// ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
 // -------------------------------------------------------------------------
 // Union all of the types.
 template<typename... Ts>
@@ -520,6 +574,7 @@ class Union
 
 protected:
 	detail::UnionImpl<Ts...> m_union;
+	static __CONSTINIT std::tuple<Ts...> params;
 
 #if 0
 public:
@@ -543,19 +598,22 @@ class SafeEndianUnion
 {
 private:
 	template<typename T>
-	inline T check_and_fix_endianness(const T& value)
+	inline T check_and_fix_endianness(const T& value) noexcept
 	{
 		T ret = value;
 
 		static constexpr auto endian = static_cast<detail::endian>(Endianness);
 		if constexpr(endian != detail::endian::native)
 		{
-			if(m_type_code != typeid(T).hash_code())
+//			if(m_type_code != typeid(T).hash_code())
+//				ret = detail::BitsManipulation::swap_endian(value);
+
+			if(m_info.get_type() != detail::TypeInfo<Ts...>::CodeNone)
 				ret = detail::BitsManipulation::swap_endian(value);
-			
+
 			// If you have containers or structures then the bits in one of the
 			// endianness are reversed from the other, this is just reversing them.
-			else if constexpr(sizeof(T) == sizeof(uint8_t))
+			if constexpr(sizeof(T) == sizeof(uint8_t))
 				ret = detail::BitsManipulation::reverse_bits(value);
 		}
 
@@ -563,14 +621,16 @@ private:
 	}
 
 	template<typename T>
-	constexpr void assign_value(T& value)
+	constexpr void assign_value(T& value) noexcept
 	{
-		m_type_code = typeid(T).hash_code();
+		// Insanely performance decrease.
+		// m_type_code = typeid(T).hash_code(); 
 		this->m_union.set_data(check_and_fix_endianness(value));
+		m_info.set_type<T>();
 	}
 
 public:
-	constexpr SafeEndianUnion() noexcept = default;
+	constexpr SafeEndianUnion() noexcept;
 	
 	template<typename T>
 	constexpr SafeEndianUnion(const T& value) { 
@@ -598,49 +658,38 @@ public:
 	}
 
 	template<size_t i>
-	constexpr auto get()
+	constexpr auto get() noexcept
 	{
 		const auto value = this->m_union. template get_by_index<i>();
 		return check_and_fix_endianness(value);
 	}
 
 	template<typename T>
-	constexpr auto get()
+	constexpr auto get() noexcept
 	{
 		const T value = this->m_union. template get_by_type<T>();
 		return check_and_fix_endianness(value);
 	}
 
 	template<size_t i, typename T>
-	constexpr void set(const T& value) {
+	constexpr void set(const T& value) noexcept {
        	assign_value(value);
 	}
 
 	template<typename T>
-	constexpr void set(const T& value) {
+	constexpr void set(const T& value) noexcept {
 		assign_value(value);
 	}
 
 	template<typename T>
-	constexpr auto operator=(const T& value) 
+	constexpr auto operator=(const T& value) noexcept
 	{
 		assign_value(value);
 		return *this;
 	}
 	
-	template<typename T>
-	constexpr bool holds_alternative() noexcept {
-		return typeid(T).hash_code() == m_type_code;
-	}
-	
-	constexpr bool holds_anything() noexcept {
-		return m_type_code != TYPE_CODE_EMPTY;
-	}
-
 private:
-	using type_code = size_t;
-	static constexpr type_code TYPE_CODE_EMPTY = std::numeric_limits<type_code>::max();
-	type_code m_type_code = TYPE_CODE_EMPTY;
+	detail::TypeInfo<Ts...> m_info;
 };
 
 } // namespace evi
