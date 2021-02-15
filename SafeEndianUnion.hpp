@@ -119,96 +119,6 @@ constexpr To bitcast(const From& from) noexcept
 }
 
 // -------------------------------------------------------------------------
-// This code is causing undefined behivour, because of
-// C++ Type Punning strict rules.
-// http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c183-dont-use-a-union-for-type-punning
-#if 0 
-// Union Implementation for variadic elements
-template <typename, typename...>
-union UnionImpl;
-
-template <typename T>
-union UnionImpl<T> {
-    T value;
-};
-
-template <typename T, typename... Ts>
-union UnionImpl {
-    T value;
-    UnionImpl<Ts...> rest;
-};
-
-// -------------------------------------------------------------------------
-// Recursive specialization to get values by index.
-template<size_t i>
-struct getter_index
-{
-	template<typename... Ts>
-	[[nodiscard]]
-	static constexpr auto& get(UnionImpl<Ts...>& u) {
-		return getter_index<i - 1>::get(u.rest);
-	}
-};
-
-template<>
-struct getter_index<0>
-{
-	template<typename T, typename... Ts>
-	[[nodiscard]]
-	static constexpr auto& get(UnionImpl<T, Ts...>& u) {
-		return u.value;
-	}
-};
-
-template<size_t i, typename... Ts>
-[[nodiscard]] 
-static constexpr auto& get_by_index(UnionImpl<Ts...>& u) 
-{
-	static_assert(i < sizeof...(Ts), "index is too big!");
-	return getter_index<i>::get(u);
-}
-
-// -------------------------------------------------------------------------
-// Recursive specialization to get values by typename.
-template<size_t i, typename Ret>
-struct getter_type
-{
-	template<typename... Ts>
-	[[nodiscard]]
-	static constexpr Ret& get(UnionImpl<Ts...>& u) 
-	{
-		if constexpr(std::is_same_v<decltype(u.value), Ret>)
-			return u.value;
-
-		return getter_type<i - 1, Ret>::get(u.rest);
-	}
-};
-
-template<typename Ret>
-struct getter_type<0, Ret>
-{
-	template<typename T, typename... Ts>
-	[[nodiscard]]
-	static constexpr Ret& get(UnionImpl<T, Ts...>& u) 
-	{
-		if constexpr(std::is_same_v<decltype(u.value), Ret>)
-			return u.value;
-
-		// Unreachable code
-		throw 0;	
-	}
-};
-
-template<typename T, typename... Ts>
-[[nodiscard]]
-static constexpr T& get_by_type(UnionImpl<Ts...>& u) 
-{
-	static_assert(std::disjunction_v<std::is_same<T, Ts>...>, "T does not exists in the union.");
-	return getter_type<sizeof...(Ts) - 1, T>::get(u);
-}
-
-#else
-
 template<typename... Ts>
 class UnionImpl 
 {
@@ -247,8 +157,6 @@ private:
    	using data_t = std::array<std::byte, data_size>;
 	data_t data;
 };
-
-#endif
 
 // -------------------------------------------------------------------------
 // Checks if type is an Union
