@@ -255,6 +255,7 @@ template<typename T>
 inline constexpr bool is_possible_type_in_struct_v = is_possible_type_in_struct<T>::value;
 
 // -------------------------------------------------------------------------
+// A class to swap endianness and reverse bits.
 class BitsManipulation
 {
 private:
@@ -499,6 +500,7 @@ __EVI_CONSTEVAL bool validate_possible_structs()  noexcept {
 // -------------------------------------------------------------------------
 // ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
 // -------------------------------------------------------------------------
+
 // Getting the index of a location in a tuple.
 template <typename T, typename Tuple>
 class IndexOfType;
@@ -540,6 +542,10 @@ public:
 
 	constexpr type_code_t get_type() const noexcept { 
 		return m_current_type;
+	}
+
+	constexpr bool empty() const noexcept {
+		return m_current_type == NoneCode;
 	}
 
 private:
@@ -597,7 +603,7 @@ private:
 		{
 //			if(m_type_code != typeid(T).hash_code())
 //				ret = detail::BitsManipulation::swap_endian(value);
-			if(this->m_info.get_type() != this->m_info. template get_index<std::remove_cv_t<T>>())
+			if(this->m_info.get_type() != this->m_info. template get_index<std::remove_cv_t<detail::remove_pr_t<T>>>())
 				ret = detail::BitsManipulation::swap_endian(value);
 
 			// If you have containers or structures then the bits in one of the
@@ -614,7 +620,7 @@ private:
 	{
 		// Insanely performance decrease.
 		// m_type_code = typeid(T).hash_code(); 
-		this->m_info. template set_type<std::remove_cv_t<T>>();
+		this->m_info. template set_type<std::remove_cv_t<detail::remove_pr_t<T>>>();
 		this->m_union.set_data(check_and_fix_endianness(value));
 	}
 
@@ -681,6 +687,15 @@ public:
 	{
 		assign_value(value);
 		return *this;
+	}
+
+	template<typename T>
+	constexpr bool holds_alternative() noexcept {
+		return this->m_info.get_type() == this->m_info. template get_index<std::remove_cv_t<detail::remove_pr_t<T>>>(); 
+	}
+
+	constexpr bool holds_anything() const noexcept {
+		return !this->m_info.empty();
 	}
 };
 
