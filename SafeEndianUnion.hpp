@@ -545,7 +545,7 @@ public:
 private:
 	inline static __EVI_CONSTINIT type_code_t NoneCode = 0;
 	inline static __EVI_CONSTINIT type_code_t Size = sizeof...(Ts) + 1;
-	type_code_t m_current_type;
+	type_code_t m_current_type = 0;
 };
 
 } // namespace detail
@@ -597,9 +597,7 @@ private:
 		{
 //			if(m_type_code != typeid(T).hash_code())
 //				ret = detail::BitsManipulation::swap_endian(value);
-
-			std::cout << "Info: " << this->m_info.get_type() << " Currently: " <<  this->m_info. template get_index<T>() << "\n";
-			if(this->m_info.get_type() != this->m_info. template get_index<T>())
+			if(this->m_info.get_type() != this->m_info. template get_index<std::remove_cv_t<T>>())
 				ret = detail::BitsManipulation::swap_endian(value);
 
 			// If you have containers or structures then the bits in one of the
@@ -616,13 +614,13 @@ private:
 	{
 		// Insanely performance decrease.
 		// m_type_code = typeid(T).hash_code(); 
-		this->m_info. template set_type<T>();
+		this->m_info. template set_type<std::remove_cv_t<T>>();
 		this->m_union.set_data(check_and_fix_endianness(value));
 	}
 
 public:
-	SafeEndianUnion() noexcept;
-	
+	constexpr SafeEndianUnion() noexcept = default;
+
 	template<typename T>
 	constexpr SafeEndianUnion(const T& value) { 
 		assign_value(value); 
@@ -657,7 +655,7 @@ public:
 	template<size_t i>
 	constexpr auto get() noexcept
 	{
-		const auto value = this->m_union. template get_by_index<i>();
+		auto value = this->m_union. template get_by_index<i>();
 		return check_and_fix_endianness(value);
 	}
 
