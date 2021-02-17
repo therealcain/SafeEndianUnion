@@ -39,8 +39,6 @@
 #include <array>
 // for std::tuple, std::tuple_element
 #include <tuple>
-// for std::numeric_limits
-#include <limits>
 
 // Many compilers are still not supporting this.
 #if __has_include(<bit>)
@@ -56,11 +54,17 @@
 #endif
 
 // -------------------------------------------------------------------------
-// Some compilers are still not supporting this keyword.
+// Some compilers are still not supporting these keywords.
 #ifdef __cpp_consteval
 # define __EVI_CONSTEVAL consteval
 #else
 # define __EVI_CONSTEVAL constexpr
+#endif
+
+#ifdef __cpp_constinit
+# define __EVI_CONSTINIT constinit
+#else
+# define __EVI_CONSTINIT constexpr
 #endif
 
 namespace evi {
@@ -132,7 +136,6 @@ public:
     }
 
     template<size_t i>
-    [[nodiscard]]
     constexpr auto get_by_index()
     {
         static_assert(i < sizeof...(Ts), "index is too big!");
@@ -141,7 +144,6 @@ public:
     }
 
     template<typename T>
-    [[nodiscard]]
     constexpr auto get_by_type()
     {
         static_assert(std::disjunction_v<std::is_same<T, Ts>...>, "T does not exists in the union.");
@@ -251,6 +253,7 @@ template<typename T>
 inline constexpr bool is_possible_type_in_struct_v = is_possible_type_in_struct<T>::value;
 
 // -------------------------------------------------------------------------
+// A class to swap endianness and reverse bits.
 class BitsManipulation
 {
 private:
@@ -261,7 +264,6 @@ private:
 	// - 64 bits
 	// - Others may cause compile-time errors.
 	template<typename T>
-	[[nodiscard]]
 	static constexpr T byte_order_swap(T value) noexcept // byte
 		requires ( sizeof(T) == sizeof(uint8_t) ) 
 	{
@@ -269,7 +271,6 @@ private:
 	}
 	
 	template<typename T>
-	[[nodiscard]]
 	static constexpr T byte_order_swap(T value) noexcept // 2 bytes
 		requires ( sizeof(T) == sizeof(uint16_t) ) 
 	{
@@ -283,7 +284,6 @@ private:
 	}
 
 	template<typename T>
-	[[nodiscard]]
 	static constexpr T byte_order_swap(T value) noexcept // 4 bytes
 		requires ( sizeof(T) == sizeof(uint32_t) && std::is_integral_v<T> ) 
 	{
@@ -300,7 +300,6 @@ private:
 	}
 
 	template<typename T>
-	[[nodiscard]]
 	static constexpr T byte_order_swap(T value) noexcept // 8 bytes
 		requires ( sizeof(T) == sizeof(uint64_t) && std::is_integral_v<T> ) 
 	{
@@ -321,7 +320,6 @@ private:
 	}
 
 	template<typename T>
-	[[nodiscard]]
 	static constexpr T byte_order_swap(T value) // 4 bytes
 		requires ( sizeof(float) == sizeof(uint32_t) && std::is_floating_point_v<T> ) 
 	{
@@ -338,7 +336,6 @@ private:
 	}
 
 	template<typename T>
-	[[nodiscard]]
 	static constexpr T byte_order_swap(T value) // 8 bytes
 		requires ( sizeof(double) == sizeof(uint64_t) && std::is_floating_point_v<T> )
 	{
@@ -351,14 +348,13 @@ private:
 	}
 
 	template<typename T>
-	[[nodiscard]] [[noreturn]]
+	[[noreturn]]
 	static constexpr T byte_order_swap(T) noexcept {
 		static_assert(std::is_same_v<T, void>, "System has unknown size.");
 	}
 
 public:
 	template<typename T>
-	[[nodiscard]]
 	static constexpr T swap_endian(const T& value)
 		requires( std::is_arithmetic_v<T> )
 	{
@@ -366,7 +362,6 @@ public:
 	}
 
 	template<typename T>
-	[[nodiscard]]
 	static constexpr T swap_endian(const T& src)
 		// requires data structure or array
 	{
@@ -500,12 +495,67 @@ template<typename T>
 __EVI_CONSTEVAL bool validate_possible_structs()  noexcept {
 	return true;
 }
+// -------------------------------------------------------------------------
+// ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
+// -------------------------------------------------------------------------
 
+// Getting the index of a location in a tuple.
+template<size_t i, typename T, typename... Ts>
+__EVI_CONSTEVAL size_t get_index_type()
+{
+	using element_t = typename std::tuple_element_t<i, std::tuple<Ts...>>;
+
+	if constexpr(std::is_same_v<T, element_t>)
+		return i;
+	else
+		return get_index_type<i + 1, T, Ts...>();
+}
+
+template<typename T, typename... Ts>
+__EVI_CONSTEVAL size_t get_index_type() 
+{
+	static_assert(std::disjunction_v<std::is_same<T, Ts>...>, "T is not found in the variadic template arguments!");
+	return get_index_type<0, T, Ts...>();
+}
+
+
+// -------------------------------------------------------------------------
+// Holds the the index of a variadic template, at compile-time.
+template<typename... Ts>
+class TypeInfo
+{
+	using type_code_t = size_t;
+
+public:
+	constexpr TypeInfo() noexcept 
+		: m_current_type(NoneCode) {}
+
+	template<typename T>
+	constexpr type_code_t get_index() const noexcept {
+		return get_index_type<T, Ts...>();
+	}
+
+	template<typename T>
+	constexpr void set_type() noexcept {
+		m_current_type = get_index<T>(); 
+	}	
+
+	constexpr type_code_t get_type() const noexcept { 
+		return m_current_type;
+	}
+
+	constexpr bool empty() const noexcept {
+		return m_current_type == NoneCode;
+	}
+
+private:
+	inline static __EVI_CONSTINIT type_code_t NoneCode = 0;
+	inline static __EVI_CONSTINIT type_code_t Size = sizeof...(Ts) + 1;
+	type_code_t m_current_type = 0;
+};
 
 } // namespace detail
 
-// -------------------------------------------------------------------------
-// ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
 // -------------------------------------------------------------------------
 // Union all of the types.
 template<typename... Ts>
@@ -520,6 +570,7 @@ class Union
 
 protected:
 	detail::UnionImpl<Ts...> m_union;
+	detail::TypeInfo<Ts...> m_info;
 
 #if 0
 public:
@@ -543,16 +594,18 @@ class SafeEndianUnion
 {
 private:
 	template<typename T>
-	inline T check_and_fix_endianness(const T& value)
+	inline T check_and_fix_endianness(const T& value) noexcept
 	{
 		T ret = value;
 
 		static constexpr auto endian = static_cast<detail::endian>(Endianness);
 		if constexpr(endian != detail::endian::native)
 		{
-			if(m_type_code != typeid(T).hash_code())
+//			if(m_type_code != typeid(T).hash_code())
+//				ret = detail::BitsManipulation::swap_endian(value);
+			if(this->m_info.get_type() != this->m_info. template get_index<std::remove_cv_t<detail::remove_pr_t<T>>>())
 				ret = detail::BitsManipulation::swap_endian(value);
-			
+
 			// If you have containers or structures then the bits in one of the
 			// endianness are reversed from the other, this is just reversing them.
 			else if constexpr(sizeof(T) == sizeof(uint8_t))
@@ -563,85 +616,87 @@ private:
 	}
 
 	template<typename T>
-	constexpr void assign_value(T& value)
+	constexpr void assign_value(T& value) noexcept
 	{
-		m_type_code = typeid(T).hash_code();
+		// Insanely performance decrease.
+		// m_type_code = typeid(T).hash_code(); 
+		this->m_info. template set_type<std::remove_cv_t<detail::remove_pr_t<T>>>();
 		this->m_union.set_data(check_and_fix_endianness(value));
 	}
 
 public:
 	constexpr SafeEndianUnion() noexcept = default;
-	
+
 	template<typename T>
 	constexpr SafeEndianUnion(const T& value) { 
 		assign_value(value); 
 	}
 
-	constexpr SafeEndianUnion(const SafeEndianUnion& other) noexcept {
+	constexpr SafeEndianUnion(const SafeEndianUnion& other) noexcept 
+	{
 		this->m_union = other.m_union;
+		this->m_info  = other.m_info;
 	}
 
-	constexpr SafeEndianUnion(SafeEndianUnion&& other) noexcept {
+	constexpr SafeEndianUnion(SafeEndianUnion&& other) noexcept 
+	{
 		this->m_union = other.m_union;
+		this->m_info  = other.m_info;
 	}
 
 	constexpr auto operator=(const SafeEndianUnion& other) noexcept
 	{
 		this->m_union = other.m_union;
+		this->m_info  = other.m_info;
 		return *this;
 	}
 
 	constexpr auto operator=(SafeEndianUnion&& other) noexcept
 	{
 		this->m_union = other.m_union;
+		this->m_info  = other.m_info;
 		return *this;
 	}
 
 	template<size_t i>
-	constexpr auto get()
+	constexpr auto get() noexcept
 	{
-		const auto value = this->m_union. template get_by_index<i>();
+		auto value = this->m_union. template get_by_index<i>();
 		return check_and_fix_endianness(value);
 	}
 
 	template<typename T>
-	constexpr auto get()
+	constexpr auto get() noexcept
 	{
 		const T value = this->m_union. template get_by_type<T>();
 		return check_and_fix_endianness(value);
 	}
 
 	template<size_t i, typename T>
-	constexpr void set(const T& value) {
+	constexpr void set(const T& value) noexcept {
        	assign_value(value);
 	}
 
 	template<typename T>
-	constexpr void set(const T& value) {
+	constexpr void set(const T& value) noexcept {
 		assign_value(value);
 	}
 
 	template<typename T>
-	constexpr auto operator=(const T& value) 
+	constexpr auto operator=(const T& value) noexcept
 	{
 		assign_value(value);
 		return *this;
 	}
-	
+
 	template<typename T>
 	constexpr bool holds_alternative() noexcept {
-		return typeid(T).hash_code() == m_type_code;
-	}
-	
-	constexpr bool holds_anything() noexcept {
-		return m_type_code != TYPE_CODE_EMPTY;
+		return this->m_info.get_type() == this->m_info. template get_index<std::remove_cv_t<detail::remove_pr_t<T>>>(); 
 	}
 
-private:
-	using type_code = size_t;
-	static constexpr type_code TYPE_CODE_EMPTY = std::numeric_limits<type_code>::max();
-	type_code m_type_code = TYPE_CODE_EMPTY;
+	constexpr bool holds_anything() const noexcept {
+		return !this->m_info.empty();
+	}
 };
 
 } // namespace evi
-
