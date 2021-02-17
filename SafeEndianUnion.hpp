@@ -608,7 +608,7 @@ private:
 
 			// If you have containers or structures then the bits in one of the
 			// endianness are reversed from the other, this is just reversing them.
-			else if constexpr(sizeof(T) == sizeof(uint8_t))
+			else if constexpr(sizeof(T) == sizeof(uint8_t) && std::is_integral_v<T>)
 				ret = detail::BitsManipulation::reverse_bits(value);
 		}
 
