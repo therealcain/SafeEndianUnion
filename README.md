@@ -137,19 +137,6 @@ Try it yourself on [godbolt](https://godbolt.org/z/M7GKsr)!
 * If the reflection system is ON then your `struct` is limited only up to 32 fields.
 * If you don't have std::endian it will use boost.
 
-## Benchmark
-### Info:
-* CPU: Ryzen 7 3700x.
-* Compiler: GNU g++ trunk.
-* Compiler Flags: O3.
-* Little Endian was tested on my machine ( Windows 10 ).
-* Big Endian was tested with qemu and mips g++ compiler under WSL2.
-### Results:
-* RGBA to HEX:
-* - Bitwise Operations: NOT YET.
-* - C union, [`ntohl`](https://linux.die.net/man/3/ntohl) and `inline` endianness check: NOT YET.
-* - `SafeEndianUnion`: NOT YET.
-
 ## How to use?
 It's just a [simple header](https://github.com/therealcain/SafeEndianUnion/blob/main/SafeEndianUnion.hpp) to drop into your project, and just run.
 
