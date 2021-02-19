@@ -34,17 +34,13 @@
 #include <cstdint>
 // for std::memcpy
 #include <cstring>
-// for std::max
+// for std::max, std::reverse
 #include <algorithm>
 #include <array>
 // for std::tuple, std::tuple_element
 #include <tuple>
-
-// Many compilers are still not supporting this.
-#if __has_include(<bit>)
 // for std::endian, std::bit_cast
-# include <bit> 
-#endif
+# include <bit>
 
 // -------------------------------------------------------------------------
 // Intrinsic functions for MSVC
@@ -75,41 +71,13 @@ class Union;
 
 namespace detail {
 // -------------------------------------------------------------------------
-// In case std::endian is not available.
-#ifdef __cpp_lib_endian
-enum class endian
-{
-	little = static_cast<int>(std::endian::little),
-	big    = static_cast<int>(std::endian::big),
-	native = static_cast<int>(std::endian::native)
-};
-#else
-// for BOOST_ENDIAN_BIG_BYTE, BOOST_ENDIAN_LITTLE_BYTE
-# if __has_include(<boost/predef/other/endian.h>)
-#  include <boost/predef/other/endian.h>
-enum class endian 
-{
-	little = BOOST_ENDIAN_BIG_BYTE,
-	big    = BOOST_ENDIAN_LITTLE_BYTE,
-
-#   ifdef BOOST_ENDIAN_BIG_BYTE
-	native = big
-#   else
-	native = little
-#   endif
-};
-#  else
-#   error "Your C++ compiler does not support std::endian, please update your compiler or install boost libs."
-# endif
-#endif
-
-// -------------------------------------------------------------------------
 // Implementation of std::bit_cast since some compilers are still
 // not supporting this function.
 template<typename To, typename From>
 constexpr To bitcast(const From& from) noexcept 
 {
 #ifdef __cpp_lib_bit_cast
+	// GCC uses __builtin_bit_cast
 	return std::bit_cast<To>(from);
 #else
 	static_assert(sizeof(To) == sizeof(From));
@@ -123,23 +91,23 @@ constexpr To bitcast(const From& from) noexcept
 }
 
 // -------------------------------------------------------------------------
+// Implementation of the union behaviour.
 template<typename... Ts>
 class UnionImpl 
 {
 public:
-
     template<typename T>
     constexpr void set_data(const T& value)
     {
         static_assert(std::disjunction_v<std::is_same<T, Ts>...>, "T does not exists in the union.");
-        data = bitcast<decltype(data)>(value);
+        data = bitcast<data_t>(value);
     }
 
     template<size_t i>
     constexpr auto get_by_index()
     {
         static_assert(i < sizeof...(Ts), "index is too big!");
-		using element_t = typename std::tuple_element_t<i, std::tuple<Ts...>>;
+		using element_t = std::tuple_element_t<i, std::tuple<Ts...>>;
 		return bitcast<element_t>(data);
     }
 
@@ -171,7 +139,7 @@ struct is_union<Union<Ts...>>
 	: std::true_type {};
 
 template<typename T>
-inline constexpr bool is_union_v = is_union<T>::value;
+constexpr bool is_union_v = is_union<T>::value;
 
 template<typename T>
 concept only_union = is_union_v<T>;
@@ -188,15 +156,14 @@ struct is_bounded_array<std::array<T, Len>>
 	: std::true_type {};
 
 template<typename T>
-inline constexpr bool is_bounded_array_v = is_bounded_array<T>::value;
+constexpr bool is_bounded_array_v = is_bounded_array<T>::value;
 
 // -------------------------------------------------------------------------
 // Remove pointer / reference.
 template<typename T>
 struct remove_pr
 {
-    using type = typename std::remove_pointer_t<
-    typename std::remove_reference_t<T>>;
+    using type = std::remove_pointer_t<std::remove_reference_t<T>>;
 };
 
 template<typename T>
@@ -215,7 +182,7 @@ struct is_plain_type
 };
 
 template<typename T>
-inline constexpr bool is_plain_type_v = is_plain_type<T>::value;
+constexpr bool is_plain_type_v = is_plain_type<T>::value;
 
 // -------------------------------------------------------------------------
 // Checks if a struct is POD aka standard layout.
@@ -225,7 +192,7 @@ struct is_struct_standard_layout {
 };
 
 template<typename T>
-inline constexpr bool is_struct_standard_layout_v = is_struct_standard_layout<T>::value;
+constexpr bool is_struct_standard_layout_v = is_struct_standard_layout<T>::value;
 
 // -------------------------------------------------------------------------
 // Checks if a type is an union possiblity
@@ -239,8 +206,9 @@ struct is_union_possible_type
 };
 
 template<typename T>
-inline constexpr bool is_union_possible_type_v = is_union_possible_type<T>::value;
+constexpr bool is_union_possible_type_v = is_union_possible_type<T>::value;
 
+// -------------------------------------------------------------------------
 // Checks if a type is a possiblity member in a struct.
 template<typename T>
 struct is_possible_type_in_struct
@@ -250,7 +218,7 @@ struct is_possible_type_in_struct
 };
 
 template<typename T>
-inline constexpr bool is_possible_type_in_struct_v = is_possible_type_in_struct<T>::value;
+constexpr bool is_possible_type_in_struct_v = is_possible_type_in_struct<T>::value;
 
 // -------------------------------------------------------------------------
 // A class to swap endianness and reverse bits.
@@ -324,8 +292,8 @@ private:
 		requires ( sizeof(float) == sizeof(uint32_t) && std::is_floating_point_v<T> ) 
 	{
 		// de-referencing float pointer as uint32_t breaks strict-aliasing rules for C++, even if it normally works.
-     		// uint32_t temp = byte_order_swap(*(reinterpret_cast<const uint32_t*>(&value)));
-     		// return *(reinterpret_cast<float*>(&temp));
+		// uint32_t temp = byte_order_swap(*(reinterpret_cast<const uint32_t*>(&value)));
+		// return *(reinterpret_cast<float*>(&temp));
 		
 		uint32_t temp;
 		std::memcpy(&temp, reinterpret_cast<const void*>(&value), sizeof(uint32_t));
@@ -374,7 +342,7 @@ public:
 		return *reinterpret_cast<T*>(dest_casted);
 	}
 
-	static constexpr uint8_t reverse_bits(uint8_t value)
+	static constexpr uint8_t reverse_byte(uint8_t value)
 	{
 		value = (value & 0xF0) >> 4 | (value & 0x0F) << 4;
 		value = (value & 0xCC) >> 2 | (value & 0x33) << 2;
@@ -503,7 +471,7 @@ __EVI_CONSTEVAL bool validate_possible_structs()  noexcept {
 template<size_t i, typename T, typename... Ts>
 __EVI_CONSTEVAL size_t get_index_type()
 {
-	using element_t = typename std::tuple_element_t<i, std::tuple<Ts...>>;
+	using element_t = std::tuple_element_t<i, std::tuple<Ts...>>;
 
 	if constexpr(std::is_same_v<T, element_t>)
 		return i;
@@ -512,7 +480,7 @@ __EVI_CONSTEVAL size_t get_index_type()
 }
 
 template<typename T, typename... Ts>
-__EVI_CONSTEVAL size_t get_index_type() 
+__EVI_CONSTEVAL size_t get_index_type()
 {
 	static_assert(std::disjunction_v<std::is_same<T, Ts>...>, "T is not found in the variadic template arguments!");
 	return get_index_type<0, T, Ts...>();
@@ -522,29 +490,29 @@ __EVI_CONSTEVAL size_t get_index_type()
 // -------------------------------------------------------------------------
 // Holds the the index of a variadic template, at compile-time.
 template<typename... Ts>
-class TypeInfo
+class TypeHolder
 {
 	using type_code_t = size_t;
 
 public:
-	constexpr TypeInfo() noexcept 
+	constexpr TypeHolder()
 		: m_current_type(NoneCode) {}
 
 	template<typename T>
-	constexpr type_code_t get_index() const noexcept {
+	constexpr type_code_t get_index() const {
 		return get_index_type<T, Ts...>();
 	}
 
 	template<typename T>
-	constexpr void set_type() noexcept {
+	constexpr void set_type() {
 		m_current_type = get_index<T>(); 
 	}	
 
-	constexpr type_code_t get_type() const noexcept { 
+	constexpr type_code_t get_type() const { 
 		return m_current_type;
 	}
 
-	constexpr bool empty() const noexcept {
+	constexpr bool empty() const {
 		return m_current_type == NoneCode;
 	}
 
@@ -565,16 +533,16 @@ class Union
 	static_assert(std::conjunction_v<detail::is_union_possible_type<Ts>...>, "Type is incorrect!");
 	static_assert((detail::validate_possible_structs<Ts>() && ...), "Types in your struct are incorrect!");
     
-    using first_element_t = typename std::tuple_element_t<0, std::tuple<Ts...>>;
+    using first_element_t = std::tuple_element_t<0, std::tuple<Ts...>>;
     static_assert(((sizeof(first_element_t) == sizeof(Ts)) && ...), "Your types with different size!");
 
 protected:
-	detail::UnionImpl<Ts...> m_union;
-	detail::TypeInfo<Ts...> m_info;
+	detail::UnionImpl<Ts...>  m_union;
+	detail::TypeHolder<Ts...> m_info;
 
 #if 0
 public:
-	Union() { std::cout << sizeof(m_union) << std::endl; }
+	Union() { std::cout << sizeof(m_union) << "\n"; }
 #endif
 };
 
@@ -582,8 +550,8 @@ public:
 // Which endianness the struct is.
 enum class ByteOrder 
 { 
-	Little = static_cast<int>(detail::endian::little), 
-	Big    = static_cast<int>(detail::endian::big)
+	Little = static_cast<int>(std::endian::little), 
+	Big    = static_cast<int>(std::endian::big)
 };
 
 // -------------------------------------------------------------------------
@@ -598,8 +566,8 @@ private:
 	{
 		T ret = value;
 
-		static constexpr auto endian = static_cast<detail::endian>(Endianness);
-		if constexpr(endian != detail::endian::native)
+		static constexpr auto endian = static_cast<std::endian>(Endianness);
+		if constexpr(endian != std::endian::native)
 		{
 //			if(m_type_code != typeid(T).hash_code())
 //				ret = detail::BitsManipulation::swap_endian(value);
@@ -609,14 +577,14 @@ private:
 			// If you have containers or structures then the bits in one of the
 			// endianness are reversed from the other, this is just reversing them.
 			else if constexpr(sizeof(T) == sizeof(uint8_t) && std::is_integral_v<T>)
-				ret = detail::BitsManipulation::reverse_bits(value);
+				ret = detail::BitsManipulation::reverse_byte(value);
 		}
 
 		return ret;
 	}
 
 	template<typename T>
-	constexpr void assign_value(T& value) noexcept
+	constexpr void assign_value(T& value)
 	{
 		// Insanely performance decrease.
 		// m_type_code = typeid(T).hash_code(); 
@@ -628,7 +596,7 @@ public:
 	constexpr SafeEndianUnion() noexcept = default;
 
 	template<typename T>
-	constexpr SafeEndianUnion(const T& value) { 
+	constexpr SafeEndianUnion(const T& value) noexcept { 
 		assign_value(value); 
 	}
 
@@ -661,7 +629,7 @@ public:
 	template<size_t i>
 	constexpr auto get() noexcept
 	{
-		auto value = this->m_union. template get_by_index<i>();
+		const auto value = this->m_union. template get_by_index<i>();
 		return check_and_fix_endianness(value);
 	}
 
@@ -673,24 +641,24 @@ public:
 	}
 
 	template<size_t i, typename T>
-	constexpr void set(const T& value) noexcept {
+	constexpr void set(const T& value) {
        	assign_value(value);
 	}
 
 	template<typename T>
-	constexpr void set(const T& value) noexcept {
+	constexpr void set(const T& value) {
 		assign_value(value);
 	}
 
 	template<typename T>
-	constexpr auto operator=(const T& value) noexcept
+	constexpr auto operator=(const T& value)
 	{
 		assign_value(value);
 		return *this;
 	}
 
 	template<typename T>
-	constexpr bool holds_alternative() noexcept {
+	constexpr bool holds_alternative() const noexcept {
 		return this->m_info.get_type() == this->m_info. template get_index<std::remove_cv_t<detail::remove_pr_t<T>>>(); 
 	}
 
@@ -700,3 +668,4 @@ public:
 };
 
 } // namespace evi
+
