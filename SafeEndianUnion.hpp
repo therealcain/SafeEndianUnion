@@ -356,7 +356,6 @@ public:
 // ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
 // -------------------------------------------------------------------------
 // Simple reflection system to validate the types inside a struct.
-#ifdef EVI_ENABLE_REFLECTION_SYSTEM
 
 // Class is convertible to anything.
 struct UniversalType
@@ -394,6 +393,7 @@ struct StructToTuple;
 
 // Yeah, Nasty...
 // Only if we had variadic structured bindings... :)
+__EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 1 , m1);
 __EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 2 , m1, m2);
 __EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 3 , m1, m2, m3);
 __EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 4 , m1, m2, m3, m4);
@@ -427,42 +427,32 @@ __EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 31, m1, m2, m3, m4, m5,
 __EVI_MAKE_STRUCT_TO_TUPLE_SPECIALIZATION(StructToTuple, 32, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24, m25, m26, m27, m28, m29, m30, m31, m32);
 
 // -------------------------------------------------------------------------
+// Converting a struct into a tuple.
+template<typename T>
+using struct_to_tuple_t = std::invoke_result_t<
+	decltype(StructToTuple<count_member_fields<T>(), T>::unevaluated), T&>;
+
+// -------------------------------------------------------------------------
 // Checking all of the members in a tuple to validate them.
 template<typename T, typename... Ts>
-__EVI_CONSTEVAL bool check_tuple_types(std::tuple<T, Ts...>*) 
-{
-	constexpr bool first_member = is_possible_type_in_struct_v<T>;
-	constexpr bool rest_members = std::conjunction_v<is_possible_type_in_struct<Ts>...>;
-	constexpr bool all_same     = std::conjunction_v<std::is_same<T, Ts>...>;
-
-   	static_assert(first_member || rest_members, "Your struct fields are having an incorrect type.");
-   	static_assert(all_same, "Your struct fields are not the same.");
-
-	return first_member && rest_members && all_same;
+__EVI_CONSTEVAL bool check_tuple_types(const std::tuple<T, Ts...>*) { 
+	return std::conjunction_v<is_possible_type_in_struct<Ts>...> && std::conjunction_v<std::is_same<T, Ts>...>;	
 }
 
 // -------------------------------------------------------------------------
-// Converting the struct to tuple and validating it.
+// Validating a possible struct.
 template<typename T>
 __EVI_CONSTEVAL bool validate_possible_structs()
-	requires ( std::is_class_v<T> )
 {
-	constexpr auto size = count_member_fields<T>();
-	if constexpr(size >= 2)
+	if constexpr(std::is_class_v<T>)
 	{
-		using U = std::invoke_result_t<decltype(StructToTuple<size, T>::unevaluated), T&>;
-       	return check_tuple_types(static_cast<U*>(nullptr));
+		using tup = struct_to_tuple_t<T>;
+		return check_tuple_types(static_cast<tup*>(nullptr));
 	}
-	
+
 	return true;
 }
 
-#endif // EVI_ENABLE_REFLECTION_SYSTEM
-
-template<typename T>
-__EVI_CONSTEVAL bool validate_possible_structs()  noexcept {
-	return true;
-}
 // -------------------------------------------------------------------------
 // ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
 // -------------------------------------------------------------------------
@@ -485,7 +475,6 @@ __EVI_CONSTEVAL size_t get_index_type()
 	static_assert(std::disjunction_v<std::is_same<T, Ts>...>, "T is not found in the variadic template arguments!");
 	return get_index_type<0, T, Ts...>();
 }
-
 
 // -------------------------------------------------------------------------
 // Holds the the index of a variadic template, at compile-time.
