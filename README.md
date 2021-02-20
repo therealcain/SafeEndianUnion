@@ -129,7 +129,7 @@ evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<uint16_t, std::tuple<uin
 struct S1 {
     struct { 
         uint8_t val;
-        } S2; // Automatically goes inside this struct, and checks it's type. Currently this makes an error.
+    } S2; // Automatically goes inside this struct, and checks it's type. Currently this makes an error.
     
     uint8_t val;
 };
