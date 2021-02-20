@@ -92,14 +92,43 @@ Here are a few fair points:
 * Make sure the compiler is using C++20. ( in GCC and Clang it's `-std=++2a` or `-std=++20` ).
 
 ## TODO
-* Implement a trivially copyable class named `evi::Bitfield<T, Len...>` to imitate the behivour of bitfields, without getting errors.
-* Support `std::tuple` in addition to `struct`.
+* Implement a trivially copyable class named `evi::Bitfield<T, Len...>` to imitate the behivour of bitfields, without getting errors:
+```cpp
+// Invalid:
+struct Binary32Format 
+{
+    uint8_t fraction : 23;
+    uint8_t exponent : 8;
+    uint8_t sign     : 1;
+};
+// Correct:
+struct Binary32Format {
+    evi::Bitfield<uint32_t, evi::Bits<23, 8, 1>> bits;
+};
+
+evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<float, Flags>> uni;
+// Or:
+evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<float, evi::Bitfield<uint32_t, evi::Bits<23, 8, 1>>>> uni;
+```
+* Support `std::tuple` in addition to `struct`:
+```cpp
+// One Option:
+struct Significane 
+{
+    uint8_t msb;
+    uint8_t lsb;
+};
+evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<uint16_t, Significane>> uni;
+
+// Second Option:
+evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<uint16_t, std::tuple<uint8_t, uint8_t>>> uni;
+```
 * Recursive reflection system to check cases like this: 
 ```cpp
 struct S1 {
     struct { 
-        uint8_t val; 
-    } S2; // check this, currently this makes an error.
+        uint8_t val;
+        } S2; // Automatically goes inside this struct, and checks it's type. Currently this makes an error.
     
     uint8_t val;
 };
