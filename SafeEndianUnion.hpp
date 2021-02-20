@@ -22,13 +22,13 @@
  * SOFTWARE.
  */
 
-// for std::is_same, std::is_arithmetic, std::remove_pointer, 
-// std::remove_reference, std::conjunction, std::disjunction,
-// std::remove_cv, std::is_standard_layout, std::is_class,
-// std::is_enum, std::is_bounded_array, std::invoke_result, 
-// std::is_integral, std::is_floating_point, std::is_trivially_copyable
+// for std::is_same, std::is_arithmetic, std::conjunction, 
+// std::is_standard_layout, std::is_class, std::is_enum, 
+// std::is_bounded_array, std::invoke_result, std::is_integral, 
+// std::is_floating_point, std::is_trivially_copyable,
+// std::disjunction, std::remove_cvref 
 #include <type_traits> 
-// for std::byte, std::size_t, std::nullptr_t
+// for std::byte, std::size_t, std::ssize_t, std::nullptr_t
 #include <cstddef>
 // for std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t
 #include <cstdint>
@@ -122,8 +122,7 @@ private:
 	static constexpr size_t data_size = std::max({sizeof(Ts)...});
 
    	// std::aligned_union or std::aligned_storage might be better here
-   	// but they require allocation on the heap with the 'new' operator
-   	// but i don't want that.
+   	// but they require allocation on the heap with the 'new' operator.
    	using data_t = std::array<std::byte, data_size>;
 	data_t data;
 };
@@ -159,26 +158,11 @@ template<typename T>
 constexpr bool is_bounded_array_v = is_bounded_array<T>::value;
 
 // -------------------------------------------------------------------------
-// Remove pointer / reference.
+// Checks if a type is a plain type, meaning a type is not const, volatile, 
+// reference or pointer.
 template<typename T>
-struct remove_pr
-{
-    using type = std::remove_pointer_t<std::remove_reference_t<T>>;
-};
-
-template<typename T>
-using remove_pr_t = typename remove_pr<T>::type;
-
-// -------------------------------------------------------------------------
-// Checks if type a is NOT cv ( const / volatile ) and it's not a pointer / reference.
-template<typename T>
-struct is_plain_type 
-{
-	static constexpr bool value = 
-		std::is_same_v<
-			std::remove_cv_t<
-				remove_pr_t<T>>, 
-		T>;
+struct is_plain_type {
+	static constexpr bool value = std::is_same_v<T, std::remove_cvref_t<T>>;
 };
 
 template<typename T>
@@ -481,7 +465,7 @@ __EVI_CONSTEVAL size_t get_index_type()
 template<typename... Ts>
 class TypeHolder
 {
-	using type_code_t = size_t;
+	using type_code_t = ssize_t;
 
 public:
 	constexpr TypeHolder()
@@ -506,7 +490,7 @@ public:
 	}
 
 private:
-	inline static __EVI_CONSTINIT type_code_t NoneCode = 0;
+	inline static __EVI_CONSTINIT type_code_t NoneCode = -1;
 	inline static __EVI_CONSTINIT type_code_t Size = sizeof...(Ts) + 1;
 	type_code_t m_current_type = 0;
 };
@@ -527,7 +511,13 @@ class Union
 
 protected:
 	detail::UnionImpl<Ts...>  m_union;
+#ifdef EVI_USE_TYPEID
+	using type_code_t = ssize_t;
+	inline static __EVI_CONSTINIT type_code_t NoneCode = -1;
+	type_code_t m_info = NoneCode;
+#else
 	detail::TypeHolder<Ts...> m_info;
+#endif
 
 #if 0
 public:
@@ -558,9 +548,11 @@ private:
 		static constexpr auto endian = static_cast<std::endian>(Endianness);
 		if constexpr(endian != std::endian::native)
 		{
-//			if(m_type_code != typeid(T).hash_code())
-//				ret = detail::BitsManipulation::swap_endian(value);
-			if(this->m_info.get_type() != this->m_info. template get_index<std::remove_cv_t<detail::remove_pr_t<T>>>())
+#ifdef EVI_USE_TYPEID
+			if(this->m_info != typeid(std::remove_cvref_t<T>).hash_code())
+#else
+			if(this->m_info.get_type() != this->m_info. template get_index<std::remove_cvref_t<T>>())
+#endif
 				ret = detail::BitsManipulation::swap_endian(value);
 
 			// If you have containers or structures then the bits in one of the
@@ -575,9 +567,13 @@ private:
 	template<typename T>
 	constexpr void assign_value(T& value)
 	{
+#ifdef EVI_USE_TYPEID
 		// Insanely performance decrease.
-		// m_type_code = typeid(T).hash_code(); 
-		this->m_info. template set_type<std::remove_cv_t<detail::remove_pr_t<T>>>();
+		this->m_info = typeid(std::remove_cvref_t<T>).hash_code(); 
+#else
+		this->m_info. template set_type<std::remove_cvref_t<T>>();
+#endif
+
 		this->m_union.set_data(check_and_fix_endianness(value));
 	}
 
@@ -647,12 +643,22 @@ public:
 	}
 
 	template<typename T>
-	constexpr bool holds_alternative() const noexcept {
-		return this->m_info.get_type() == this->m_info. template get_index<std::remove_cv_t<detail::remove_pr_t<T>>>(); 
+	constexpr bool holds_alternative() const noexcept 
+	{
+#ifdef EVI_USE_TYPEID
+		return this->m_info == typeid(T).hash_code();
+#else
+		return this->m_info.get_type() == this->m_info. template get_index<std::remove_cvref_t<T>>(); 
+#endif
 	}
 
-	constexpr bool holds_anything() const noexcept {
+	constexpr bool holds_anything() const noexcept 
+	{
+#ifdef EVI_USE_TYPEID
+		return this->m_info == this->NoneCode;
+#else
 		return !this->m_info.empty();
+#endif
 	}
 };
 
