@@ -123,7 +123,7 @@ evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<uint16_t, Significane>> 
 // Second Option:
 evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<uint16_t, std::tuple<uint8_t, uint8_t>>> uni;
 ```
-* Recursive reflection system to check cases like this: 
+* Recursive reflection system to check recursive nested `struct` or nested `std::tuple` like this: 
 ```cpp
 struct S1 {
     struct { 
