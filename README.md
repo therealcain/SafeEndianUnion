@@ -37,56 +37,6 @@ HEX = aabbccff
 ```
 Test it yourself on [godbolt](https://godbolt.org/z/1E713T)!
 
-### Status Flags
-```cpp
-// Bit fields are not allowed by the reflection system.
-#undef EVI_ENABLE_REFLECTION_SYSTEM
-
-struct StatusFlags
-{
-    bool N : 1; // Negative
-    bool V : 1; // Overflow
-    bool U : 1; // Unused
-    bool B : 1; // Break
-    bool D : 1; // Decimal
-    bool I : 1; // Interrupt
-    bool Z : 1; // Zero
-    bool C : 1; // Carry
-};
-
-int main()
-{
-    evi::SafeEndianUnion<evi::ByteOrder::Big, evi::Union<uint8_t, StatusFlags>> uni;
-    
-    uni = StatusFlags{ 0, 0, 0, 1, 1, 1, 0, 1 };
-    std::cout << std::bitset<8>(uni.get<uint8_t>()) << "\n";
-    
-    auto as_struct = uni.get<StatusFlags>();
-    std::cout << "N = " << as_struct.N << "\n";
-    std::cout << "V = " << as_struct.V << "\n";
-    std::cout << "U = " << as_struct.U << "\n";
-    std::cout << "B = " << as_struct.B << "\n";
-    std::cout << "D = " << as_struct.D << "\n";
-    std::cout << "I = " << as_struct.I << "\n";
-    std::cout << "Z = " << as_struct.Z << "\n";
-    std::cout << "C = " << as_struct.C << "\n";
-}
-```
-And the output on both endianness is: 
-```
-00011101
-N = 0
-V = 0
-U = 0
-B = 1
-D = 1
-I = 1
-Z = 0
-C = 1
-```
-
-Try it yourself on [godbolt](https://godbolt.org/z/jczsMK)!
-
 ### String Manipulation
 ```cpp
 struct data
@@ -124,18 +74,14 @@ ghi
 
 Try it yourself on [godbolt](https://godbolt.org/z/M7GKsr)!
 
-## Rules
-* Do not use pointers or references in your `struct`s, this could break the union.
-* Do not have different types in your struct, stick to only one type, this may change the size of the `struct` due to
+## What you can and can't do
+* You cannot use pointers or references in your `struct`s.
+* You cannot have different types in your struct, stick to only one type, this may change the size of the `struct` due to
 [alignment and padding.](http://www.catb.org/esr/structure-packing/)
+* * You cannot use bitfields.
 * The `struct` must be a [POD.](https://en.wikipedia.org/wiki/Passive_data_structure)
 * `evi::Union<...>` accepts only arithmetic types and a stack allocated arrays ( either `std::array<T, N>` or `array[N]` ).
-* `evi::Union<...>` will fail your compilation if you pass to it `volatile` or `const` types, it will also fail for references and pointers.
-* If you having hard time debugging your program, and you believe it may be the `SafeEndianUnion` try to enable the the reflection system, it will check if your types in the `struct` are valid.
-* You can use bit fields only if the reflection system is NOT enabled, because [bit fields are not recommended](https://stackoverflow.com/a/23458891/8298564).
-* `std::bit_cast` might fail if you use bit fields.
-* If the reflection system is ON then your `struct` is limited only up to 32 fields.
-* If you don't have std::endian it will use boost.
+* Your `struct` is limited only up to 32 fields.
 
 ## How to use?
 It's just a [simple header](https://github.com/therealcain/SafeEndianUnion/blob/main/SafeEndianUnion.hpp) to drop into your project, and just run.
@@ -144,11 +90,3 @@ Here are a few fair points:
 * It does not use any external libraries ( like Boost ), so you don't have to link anything.
 * Make sure you enable concepts and constraints in your compilers. ( in GCC it's `-fconcepts` ).
 * Make sure the compiler is using C++20. ( in GCC and Clang it's `-std=++2a` or `-std=++20` ).
-
-### Enable/Disable The Reflection System
-The reflection system is disabled by default.
-To enable it you can simply define it before you include the SafeEndianUnion header:
-```cpp
-#define EVI_ENABLE_REFLECTION_SYSTEM
-#include "SafeEndianUnion.hpp"
-```
