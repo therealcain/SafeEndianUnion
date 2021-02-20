@@ -79,7 +79,7 @@ Try it yourself on [godbolt](https://godbolt.org/z/M7GKsr)!
 * You cannot use pointers or references in your `struct`s.
 * You cannot have different types in your struct, stick to only one type, this may change the size of the `struct` due to
 [alignment and padding.](http://www.catb.org/esr/structure-packing/)
-* * You cannot use bitfields.
+* You cannot use bitfields.
 * The `struct` must be a [POD.](https://en.wikipedia.org/wiki/Passive_data_structure)
 * `evi::Union<...>` accepts only arithmetic types and a stack allocated arrays ( either `std::array<T, N>` or `array[N]` ).
 * Your `struct` is limited only up to 32 fields.
