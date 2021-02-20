@@ -94,3 +94,14 @@ Here are a few fair points:
 ## TODO
 * Implement a trivially copyable class named `evi::Bitfield<T, Len...>` to imitate the behivour of bitfields, without getting errors.
 * Support `std::tuple` in addition to `struct`.
+* Recursive reflection system to check cases like this: 
+```cpp
+struct S1 {
+    struct { 
+        uint8_t val; 
+    } S2; // check this, currently this makes an error.
+    
+    uint8_t val;
+};
+evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<uint16_t, S1>> uni;
+```
