@@ -98,9 +98,9 @@ Here are a few fair points:
 // Invalid:
 struct Binary32Format 
 {
-    uint8_t fraction : 23;
-    uint8_t exponent : 8;
-    uint8_t sign     : 1;
+    uint32_t fraction : 23;
+    uint32_t exponent : 8;
+    uint32_t sign     : 1;
 };
 // Correct:
 struct Binary32Format {
