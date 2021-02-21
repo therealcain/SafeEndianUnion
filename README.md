@@ -111,20 +111,7 @@ evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<float, Flags>> uni;
 // Or:
 evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<float, evi::Bitfield<uint32_t, evi::Bits<23, 8, 1>>>> uni;
 ```
-* Support `std::tuple` in addition to `struct`:
-```cpp
-// One Option:
-struct Significane 
-{
-    uint8_t msb;
-    uint8_t lsb;
-};
-evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<uint16_t, Significane>> uni;
-
-// Second Option:
-evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<uint16_t, std::tuple<uint8_t, uint8_t>>> uni;
-```
-* Recursive reflection system to check recursive nested `struct` or nested `std::tuple`, like this: 
+* Recursive reflection system to check nested `struct` or nested `std::tuple`, like this: 
 ```cpp
 struct S1 {
     struct { 
