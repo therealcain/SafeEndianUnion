@@ -91,34 +91,3 @@ Here are a few fair points:
 * It does not use any external libraries ( like Boost ), so you don't have to link anything.
 * Make sure you enable concepts and constraints in your compilers. ( in GCC it's `-fconcepts` ).
 * Make sure the compiler is using C++20. ( in GCC and Clang it's `-std=++2a` or `-std=++20` ).
-
-## TODO
-* Implement a trivially copyable class named `evi::Bitfield<T, Len...>` to imitate the behivour of bitfields, without getting errors:
-```cpp
-// Invalid:
-struct Binary32Format 
-{
-    uint32_t fraction : 23;
-    uint32_t exponent : 8;
-    uint32_t sign     : 1;
-};
-// Correct:
-struct Binary32Format {
-    evi::Bitfield<uint32_t, evi::Bits<23, 8, 1>> bits;
-};
-
-evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<float, Flags>> uni;
-// Or:
-evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<float, evi::Bitfield<uint32_t, evi::Bits<23, 8, 1>>>> uni;
-```
-* Recursive reflection system to check nested `struct` or nested `std::tuple`, like this: 
-```cpp
-struct S1 {
-    struct { 
-        uint8_t val;
-    } S2; // Automatically goes inside this struct, and checks it's type. Currently this makes an error.
-    
-    uint8_t val;
-};
-evi::SafeEndianUnion<evi::ByteOrder::Little, evi::Union<uint16_t, S1>> uni;
-```
